@@ -1,0 +1,57 @@
+{
+  "name": "@subimpact/data-mcp",
+  "version": "1.0.0",
+  "description": "MCP server exposing subimpact's Apify Store actors: Google SERP + AI Overviews, Google AI Mode, news, Maps, jobs, trends, social media and commerce data as MCP tools. Runs on your own Apify account.",
+  "license": "MIT",
+  "type": "module",
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "bin": {
+    "subimpact-data-mcp": "dist/index.js"
+  },
+  "files": [
+    "dist",
+    "README.md",
+    "LICENSE"
+  ],
+  "engines": {
+    "node": ">=18"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/subimpact/data-mcp"
+  },
+  "homepage": "https://github.com/subimpact/data-mcp",
+  "bugs": {
+    "url": "https://github.com/subimpact/data-mcp/issues"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "apify",
+    "google-serp",
+    "ai-overviews",
+    "google-ai-mode",
+    "news",
+    "google-maps",
+    "scraping",
+    "southeast-asia"
+  ],
+  "scripts": {
+    "build": "tsc -p tsconfig.json && cp src/tools.json dist/tools.json",
+    "prepublishOnly": "npm run build",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test": "npm run build && vitest run",
+    "gen:readme": "node scripts/gen-readme.mjs",
+    "start": "node dist/index.js"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2"
+  },
+  "devDependencies": {
+    "@types/node": "^22.18.0",
+    "ajv": "^8.20.0",
+    "typescript": "^5.9.3",
+    "vitest": "^3.2.4"
+  }
+}

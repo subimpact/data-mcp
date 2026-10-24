@@ -1,0 +1,2052 @@
+[
+  {
+    "tool": "google_search",
+    "actor": "subimpact/google-serp-ai-overviews",
+    "title": "Google SERP + AI Overviews API",
+    "description": "Google search as JSON: full AI Overview answers (lists, citations, sources) plus organic results, People Also Ask, knowledge graph, top stories and local results in one row per query. Batch up to 1,000 queries. From $1.80 per 1,000, platform costs included.",
+    "pricing": [
+      "Google SERP: $0.003"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "queries": {
+          "title": "Queries",
+          "type": "array",
+          "description": "List of search queries to run. Max 1000 per run.",
+          "prefill": [
+            "best crm for startups"
+          ]
+        },
+        "gl": {
+          "title": "Country (gl)",
+          "type": "string",
+          "description": "Two-letter country code for Google results, e.g. us, my, uk, sg.",
+          "default": "us"
+        },
+        "hl": {
+          "title": "Language (hl)",
+          "type": "string",
+          "description": "Two-letter language code, e.g. en, ms, zh.",
+          "default": "en"
+        },
+        "maxResults": {
+          "title": "Max organic results per query",
+          "type": "integer",
+          "description": "How many organic results to return per query (1-10, default 10).",
+          "default": 10
+        },
+        "location": {
+          "title": "Location",
+          "type": "string",
+          "description": "Geo target for results, e.g. \"New York, NY\" or \"Kuala Lumpur\". Empty = Google uses proxy IP geolocation. Encoded server-side via Google uule (same as SerpAPI).",
+          "default": ""
+        },
+        "retryDeferredAIO": {
+          "title": "Retry deferred AI Overviews",
+          "type": "boolean",
+          "description": "Google generates AI Overviews asynchronously — the first fetch sometimes returns only a placeholder shell. When true, the actor re-fetches (up to retryDeferredMaxFetches total) and keeps the richest response. Each retry costs one extra proxy request (~$0.0025) + compute on affected queries only. Set false to always use a single fetch per query.",
+          "default": true
+        },
+        "retryThinOverview": {
+          "title": "Retry thin AI Overviews",
+          "type": "boolean",
+          "description": "When true, an AI Overview that came back partly rendered (ends in a dangling heading, or has under 600 characters of answer text) gets one fresh SERP fetch; the richer answer is kept, never a poorer one. Requires retryDeferredAIO and retryDeferredMaxFetches > 1. Costs one extra proxy request on affected rows only. Set false to ship thin answers as served.",
+          "default": true
+        },
+        "retryDeferredMaxFetches": {
+          "title": "Max fetches per query (deferred AIO)",
+          "type": "integer",
+          "description": "Upper bound on total fetches per query when a deferred AI Overview shell is detected. 1 = single fetch (same as retryDeferredAIO=false). Higher = better recovery odds, more proxy usage on affected queries. Range 1-5.",
+          "default": 2,
+          "maximum": 5,
+          "minimum": 1
+        },
+        "captureRawHtml": {
+          "title": "Capture raw HTML",
+          "type": "boolean",
+          "description": "When true, saves the raw SERP HTML for every query to the key-value store (key: raw-<query>-<ts>.html). Used for building golden test corpora and debugging selector drift. Adds ~200-400KB per query to KV storage. Default false.",
+          "default": false
+        },
+        "concurrency": {
+          "title": "Concurrency",
+          "type": "integer",
+          "description": "Number of parallel queries (1-30, default 10). A/B measured: 20 queries at c5=34s, c10=35s, c20=65s — the SERP proxy pool is the bottleneck, so beyond ~10 workers latency balloons. 10 gives the same throughput as 5 with headroom for AI-Overview-heavy sets.",
+          "default": 10,
+          "maximum": 30,
+          "minimum": 1
+        },
+        "retryDeferredPoll": {
+          "title": "Legacy poll re-fetch (deferred AIO)",
+          "type": "boolean",
+          "description": "When true, re-fetches the SERP up to retryDeferredMaxFetches times when a deferred AI Overview shell is detected, keeping the richest response. Off by default: the folsrch recovery path resolves 90%+ of deferred AIOs, and the poll recovered 0/120 in the stress test while costing ~10s + extra proxy requests per shell query. Enable only if folsrch regresses.",
+          "default": false
+        },
+        "retryPartialResults": {
+          "title": "Retry partial SERP results",
+          "type": "boolean",
+          "description": "Google intermittently serves a reduced page with other modules (People Also Ask, knowledge graph, top stories) but NO organic results. When true (default), the actor re-fetches to recover organics. Queries that stay organic-empty are marked status=Partial and NOT charged. Re-fetches are included in the price.",
+          "default": true
+        },
+        "retryPartialMaxFetches": {
+          "title": "Max fetches per query (partial recovery)",
+          "type": "integer",
+          "description": "Upper bound on total fetches per query when organic results are missing (retryPartialResults=true). 1 = no re-fetch, 2 = one re-fetch, 3 = two re-fetches. Range 1-3.",
+          "default": 1,
+          "maximum": 3,
+          "minimum": 1
+        },
+        "resolveGotoTokens": {
+          "title": "Resolve /goto citation tokens via redirect",
+          "type": "boolean",
+          "description": "When true (default), AI Overview citations that still carry a raw /goto? token after the resolution chain are resolved by reading the Location header of google.com/goto?url=<token> (~90ms each, ~11.5% of citations). The original token is kept in goto_url as provenance; failures stay unresolved with unresolved_citations intact. Verified 93/93 by EnterRank + 6/6 by our probe. Set false to disable.",
+          "default": true
+        },
+        "udm56": {
+          "title": "Pin AI Overview surface (udm=56)",
+          "type": "boolean",
+          "description": "When true, appends &udm=56 to the search URL. Default FALSE after measurement (2026-09-07 A/B, 10 queries x 2 variants): udm=56 cut AIO coverage 8/10 to 4/10 and did not pin the classic surface (AI Mode share unchanged). Kept for control; leave off for Google's default routing.",
+          "default": false
+        },
+        "mobile": {
+          "title": "Mobile user-agent (A/B toggle)",
+          "type": "boolean",
+          "description": "When true, fetches the SERP and the folsrch fragment with a mobile device header set (got-scraping header generator, devices: ['mobile']). Default FALSE. Measurement (2026-09-07 spike, 10 queries x 4 variants, gl=sg): mobile UA cut truncation 6/8 (75%) to 3/8 (37%), mean answer length 687 -> 852 chars, fetch success 15/20 -> 19/20. n=10, one market, one day — EnterRank's paired A/B (30 queries x 2, MY market) was inconclusive: zero of 29 queries were classic-with-an-overview in both arms (commercial prompt set routes to AI Mode). Do not flip the default until a classic-serving prompt set settles it.",
+          "default": false
+        },
+        "captureFlaggedFolsrch": {
+          "title": "Capture flagged (truncated) serves",
+          "type": "boolean",
+          "description": "When true, and a query ends with truncation_detected true (AI Overview words missing: cut at an inline entity link, on an unclosed bracket, a trailing comma or a joining word), the answer's source HTML — the raw folsrch fragment when resolved_by is folsrch, else the shell — is saved to the default key-value store as folsrch-evidence-<query>-<ts>.html and search_metadata.folsrch_evidence points at the key. Diagnostic for studying exact cut points; best-effort, never fails a row. Adds one KV value per truncated row. Default false.",
+          "default": false
+        },
+        "retryAiModeForClassic": {
+          "title": "Re-fetch AI Mode for a classic serve (opt-in)",
+          "type": "boolean",
+          "description": "When true, an AI Mode serve triggers one re-fetch hoping for a classic AI Overview. Default FALSE after measurement (EnterRank, 2026-09-07, 101/101 answers across 4 runs): on a commercial query mix the re-fetch recovered ZERO classic serves — Google routes commercial queries to AI Mode today, so the re-fetch is a doubled SERP fetch with no recovery. Kept behind the input because routing moved once (2026-09-02: 2/2 re-fetches served classic) and can move back. When false (default), an AI Mode answer is not re-fetched: it is dropped (no ai_overview) when excludeAiMode is on (default), or shipped as-is (Success, ai_mode_detected: true, warning set, charged) when excludeAiMode is false.",
+          "default": false
+        },
+        "excludeAiMode": {
+          "title": "Classic AI Overview only (drop AI Mode answers)",
+          "type": "boolean",
+          "description": "Default TRUE. When Google serves the AI Mode surface instead of a classic AI Overview (after the optional retryAiModeForClassic re-fetch, if enabled), the row carries no ai_overview. search_metadata.ai_mode_detected and search_metadata.ai_mode_excluded are true. Organic results and People Also Ask are still delivered; the row is Success and charged, the same as a query Google shows no AI Overview for. Set to false to ship the AI Mode answer as before (flagged ai_mode_detected, Success, charged).",
+          "default": true
+        }
+      },
+      "required": [
+        "queries"
+      ]
+    }
+  },
+  {
+    "tool": "google_ai_mode",
+    "actor": "subimpact/google-ai-mode-scraper",
+    "title": "Google AI Mode Scraper",
+    "description": "Real Google AI Mode answers (udm=50 tab) rendered in Android Chrome, for any country and language: full answer, structured blocks, resolved source URLs and per-paragraph citations. From $0.0018 per answer ($0.003 on Free/Starter). Uncited answers are flagged; failed and empty queries are free.",
+    "pricing": [
+      "AI Mode search completed: $0.003"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "queries": {
+          "title": "Queries",
+          "type": "array",
+          "description": "Queries to get Google AI Mode answers for. Each query is run on the real AI Mode tab (udm=50) in a real Android Chrome browser.",
+          "prefill": [
+            "best crm for startups",
+            "notion vs obsidian"
+          ]
+        },
+        "gl": {
+          "title": "Country",
+          "type": "string",
+          "description": "Two-letter country code for the market whose AI Mode answers you want, e.g. ae (UAE), my (Malaysia), sg (Singapore), id (Indonesia), au (Australia), us. Works on both backends.",
+          "default": "us",
+          "prefill": "us"
+        },
+        "hl": {
+          "title": "Language",
+          "type": "string",
+          "description": "Language code for Google's interface and answer, e.g. en, ar, ms, id, zh-CN. Write your queries in the same language. In markets where English is not the main search language (e.g. id, th) use the local language: English queries there often get generic/US answers.",
+          "default": "en",
+          "prefill": "en"
+        },
+        "location": {
+          "title": "City / location (optional)",
+          "type": "string",
+          "description": "Google canonical location name, e.g. 'Dubai,Dubai,United Arab Emirates' or 'Kuala Lumpur,Federal Territory of Kuala Lumpur,Malaysia'. Leave empty to use the main city of the chosen country (Dubai, Kuala Lumpur, Singapore, Jakarta, Sydney, ...). Type none to send no location."
+        },
+        "skipCache": {
+          "title": "Skip cache (always fetch fresh)",
+          "type": "boolean",
+          "default": false,
+          "description": "By default, a question that was answered for the same country, language and location in the last hour may be served from our cache (marked cached: true, with cached_at). Turn this on to always fetch a fresh answer from Google, for example when tracking how answers change. Fresh answers take longer under heavy load."
+        },
+        "backend": {
+          "title": "Backend",
+          "type": "string",
+          "description": "android (default) = real AI Mode tab (udm=50) rendered in Android Chrome: full answer, structured blocks, resolved source URLs. http = legacy browserless SERP fetch (only returns AI answers Google embeds in the classic results page; uses gl/hl/location/udm50/retry options below).",
+          "default": "android",
+          "enum": [
+            "android",
+            "http"
+          ],
+          "enumTitles": [
+            "Android Chrome (real AI Mode tab)",
+            "Legacy browserless (classic SERP)"
+          ]
+        },
+        "concurrency": {
+          "title": "Concurrency",
+          "type": "integer",
+          "description": "Parallel queries (1-30). On the android backend this is capped automatically to the size of the browser pool.",
+          "default": 10,
+          "maximum": 30,
+          "minimum": 1
+        },
+        "udm50": {
+          "title": "Force AI Mode tab (udm=50)",
+          "type": "boolean",
+          "description": "[legacy http backend only] Appends udm=50. NOTE: the forced shell currently returns no answer browserlessly (Google requires a real browser for the folwr stream) — defaults OFF.",
+          "default": false
+        },
+        "retryDeferred": {
+          "title": "Recover deferred AI Mode via folsrch",
+          "type": "boolean",
+          "description": "[legacy http backend only] When the answer is deferred, re-fetch through the folsrch async endpoint. ON by default (recovery rate ~90%).",
+          "default": true
+        },
+        "retryDeferredMaxFetches": {
+          "title": "Max folsrch recovery fetches",
+          "type": "integer",
+          "description": "[legacy http backend only] Upper bound on recovery fetches per query (1-5).",
+          "default": 2,
+          "maximum": 5,
+          "minimum": 1
+        },
+        "captureRawHtml": {
+          "title": "Save raw HTML",
+          "type": "boolean",
+          "description": "[legacy http backend only] Save raw SERP HTML to the key-value store for every query (for corpus/debugging). Adds storage cost.",
+          "default": false
+        }
+      },
+      "required": [
+        "queries"
+      ]
+    }
+  },
+  {
+    "tool": "news_mentions",
+    "actor": "subimpact/news-mentions-api",
+    "title": "News Mentions API: Brand & Keyword Monitoring",
+    "description": "Search a curated index of publisher news feeds by keyword and get clean article rows: title, snippet, publisher URL, source, region, topic, language and publish time. Built for brand/PR monitoring, competitor tracking and market news in Malaysia, Southeast Asia and worldwide. Pay only per article.",
+    "pricing": [
+      "Article: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "keywords": {
+          "title": "🔎 Keywords / queries",
+          "type": "array",
+          "description": "1–100 search queries. Defaults to a demo query when omitted. Query syntax: words are ANDed by default (petronas profit = both words); \"exact phrase\" in double quotes; OR between terms (uppercase); -term or -\"phrase\" excludes. Example: Petronas OR \"Petronas Dagangan\" -sponsored.",
+          "prefill": [
+            "Petronas",
+            "\"electric vehicle\" Malaysia"
+          ],
+          "default": [
+            "Petronas",
+            "\"electric vehicle\" Malaysia"
+          ],
+          "example": [
+            "Petronas",
+            "\"electric vehicle\" Malaysia",
+            "Grab OR foodpanda -promo"
+          ],
+          "minItems": 1,
+          "maxItems": 100,
+          "items": {
+            "type": "string"
+          }
+        },
+        "excludeKeywords": {
+          "title": "🚫 Exclude terms (added to every query)",
+          "type": "array",
+          "description": "Appended to every query as -term, so you can filter noise once instead of in each keyword. Multi-word terms are quoted automatically: \"press release\" becomes -\"press release\".",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "regions": {
+          "title": "🌏 Regions",
+          "type": "array",
+          "description": "Publisher regions to search. Leave empty for all regions. MY = Malaysia, SG = Singapore, ID = Indonesia, PH = Philippines, TH = Thailand, VN = Vietnam, GLOBAL = international outlets.",
+          "default": [],
+          "prefill": [
+            "MY"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "MY",
+              "SG",
+              "ID",
+              "PH",
+              "TH",
+              "VN",
+              "GLOBAL"
+            ],
+            "enumTitles": [
+              "Malaysia",
+              "Singapore",
+              "Indonesia",
+              "Philippines",
+              "Thailand",
+              "Vietnam",
+              "Global"
+            ]
+          }
+        },
+        "topics": {
+          "title": "🗂️ Topics",
+          "type": "array",
+          "description": "Publisher sections to search. Leave empty for all topics.",
+          "default": [],
+          "items": {
+            "type": "string",
+            "enum": [
+              "general",
+              "business",
+              "tech",
+              "startups",
+              "auto",
+              "finance",
+              "crypto",
+              "marketing",
+              "ecommerce",
+              "energy"
+            ],
+            "enumTitles": [
+              "General news",
+              "Business",
+              "Technology",
+              "Startups & VC",
+              "Automotive & EV",
+              "Finance",
+              "Crypto",
+              "Marketing",
+              "E-commerce",
+              "Energy"
+            ]
+          }
+        },
+        "languages": {
+          "title": "🗣️ Languages",
+          "type": "array",
+          "description": "ISO language codes of the publisher feed, e.g. en, ms, id, th, vi. Leave empty for all languages.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "domains": {
+          "title": "✅ Only these domains",
+          "type": "array",
+          "description": "Restrict results to these publisher domains (subdomains included): thestar.com.my also matches biz.thestar.com.my. Leave empty for any publisher.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "excludeDomains": {
+          "title": "⛔ Exclude these domains",
+          "type": "array",
+          "description": "Drop results from these publisher domains (subdomains included).",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "lookbackDays": {
+          "title": "📅 Lookback (days)",
+          "type": "integer",
+          "description": "How many days back to search, counted from now (1–180). The index keeps up to 180 days of history. Ignored when dateFrom is set, and on scheduled delta runs (onlyNew) after the first run.",
+          "default": 7,
+          "prefill": 7,
+          "minimum": 1,
+          "maximum": 180
+        },
+        "dateFrom": {
+          "title": "📅 From date (optional, overrides lookback)",
+          "type": "string",
+          "description": "Only articles published on/after this date. ISO format: 2026-10-01 or 2026-10-01T09:00:00Z."
+        },
+        "dateTo": {
+          "title": "📅 To date (optional)",
+          "type": "string",
+          "description": "Only articles published on/before this date (inclusive; a bare date covers the whole day). ISO format: 2026-10-24 or 2026-10-24T18:00:00Z."
+        },
+        "maxItemsPerKeyword": {
+          "title": "💯 Max articles per keyword",
+          "type": "integer",
+          "description": "Upper limit of articles fetched for each keyword (1–5000). You are charged only for the articles actually returned.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "dedupeAcrossKeywords": {
+          "title": "🧩 One row per article (dedupe across keywords)",
+          "type": "boolean",
+          "description": "On (default): an article matching several keywords appears once, with every matching keyword in matchedKeywords. Off: one row per keyword match, pushed as soon as it is fetched.",
+          "default": true
+        },
+        "onlyNew": {
+          "title": "🆕 Only new articles since the last run (delta mode)",
+          "type": "boolean",
+          "description": "For scheduled monitoring: remembers how far the index it has been read (in the named key-value store news-mentions-state) and returns only articles added since. The first run returns the lookback window. Do not mix delta and full runs in the same task.",
+          "default": false
+        },
+        "stateKey": {
+          "title": "🔑 State key (optional)",
+          "type": "string",
+          "description": "Only for onlyNew. Name of the stored cursor. Leave empty to derive it from the query (keywords + filters), so different searches keep separate cursors in the same task."
+        }
+      },
+      "required": [
+        "keywords"
+      ]
+    }
+  },
+  {
+    "tool": "google_maps_places",
+    "actor": "subimpact/google-maps-scraper-plainhttp",
+    "title": "Google Maps Scraper",
+    "description": "Extract Google Maps places: title, address, coords, phone, website, rating, reviews count, opening hours, popular times, images, price level, menu, place ID. Search by keyword + location or place IDs. Plain-HTTP internal API, no browser, fast and cheap. $1.00 per 1,000 places.",
+    "pricing": [
+      "Place scraped: $0.001",
+      "Review scraped: $0.0005",
+      "Actor start: $5e-05"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "searchStringsArray": {
+          "title": "Search term(s)",
+          "type": "array",
+          "description": "What to search on Google Maps. Each term = one search. A term can be a business name plus its full address (compass-style exact lookup) - Google resolves the location from the string, no coordinates needed.",
+          "prefill": [
+            "restaurant"
+          ]
+        },
+        "lat": {
+          "title": "Latitude (optional)",
+          "type": "string",
+          "description": "Optional. Center latitude of the search viewport. Leave empty (with longitude) to let Google resolve the location from each search string."
+        },
+        "lng": {
+          "title": "Longitude (optional)",
+          "type": "string",
+          "description": "Optional. Center longitude of the search viewport. Only used together with latitude; empty = resolve from the search string."
+        },
+        "zoom": {
+          "title": "Zoom level (1-21)",
+          "type": "string",
+          "description": "Map zoom for the search viewport. Higher = smaller area, fewer but denser results.",
+          "prefill": "13.1"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string",
+          "enum": [
+            "en",
+            "de",
+            "fr",
+            "es",
+            "it",
+            "pt",
+            "nl",
+            "pl",
+            "ru",
+            "tr",
+            "ja",
+            "ko",
+            "zh-CN",
+            "ar",
+            "hi"
+          ],
+          "default": "en",
+          "description": "Results language."
+        },
+        "maxCrawledPlacesPerSearch": {
+          "title": "Max places",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 200,
+          "default": 50,
+          "description": "Max places per search term (compass semantics). Each search string can return up to this many places; a run with N terms returns up to N x this. Detail records are charged per place.",
+          "prefill": 50
+        },
+        "maxReviews": {
+          "title": "Reviews per place ($)",
+          "type": "integer",
+          "minimum": 0,
+          "maximum": 99999,
+          "default": 0,
+          "description": "Number of reviews to extract per place. 0 = none. Each review = review-scraped charge.",
+          "prefill": 0
+        },
+        "scrapePlaceDetailPage": {
+          "title": "Scrape place detail page",
+          "type": "boolean",
+          "default": true,
+          "description": "Open each place's detail payload (phone, hours, popular times, images, price). Off = search-level records only."
+        },
+        "placeIds": {
+          "title": "Place IDs (ChIJ...)",
+          "type": "array",
+          "description": "Direct place detail scrape by ChIJ place ID."
+        },
+        "startUrls": {
+          "title": "Google Maps URLs",
+          "type": "array",
+          "description": "Direct place detail scrape by maps.google.com place URL.",
+          "prefill": []
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. Residential proxies recommended for large runs from datacenter IPs."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "google_jobs",
+    "actor": "subimpact/google-jobs-scraper",
+    "title": "Google Jobs Scraper (Cheap, No Browser)",
+    "description": "Scrape Google Jobs listings by query and country: title, company, location, source (LinkedIn, Indeed...), posted date, salary, job type, description and apply links. No browser. $1.00 per 1,000 jobs plus Google SERP proxy usage.",
+    "pricing": [
+      "Job: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "queries": {
+          "title": "Search queries",
+          "type": "array",
+          "description": "One or more Google Jobs searches, e.g. `software engineer jobs kuala lumpur` or `barista jobs singapore`. Each query returns Google's first Jobs page (about 10 listings). Add more queries to cover more jobs. Maximum 100 queries per run.",
+          "default": [
+            "software engineer jobs"
+          ],
+          "prefill": [
+            "software engineer jobs kuala lumpur"
+          ],
+          "maxItems": 100
+        },
+        "countryCode": {
+          "title": "Country code (gl)",
+          "type": "string",
+          "description": "Two-letter country code used for the Google country setting. Examples: us, my, sg, gb, au, ca, in. `uk` is accepted and mapped to gb.",
+          "default": "us",
+          "prefill": "my"
+        },
+        "languageCode": {
+          "title": "Language code (hl)",
+          "type": "string",
+          "description": "Google interface language. Use a two-letter code like en, ms, de, or a regional code like en-MY.",
+          "default": "en",
+          "prefill": "en"
+        },
+        "location": {
+          "title": "Location (optional)",
+          "type": "string",
+          "description": "Free text appended to every query, e.g. `Kuala Lumpur` or `remote`. Leave empty to search the query exactly as written. The country code still controls the Google country setting."
+        },
+        "maxJobsPerQuery": {
+          "title": "Max jobs per query",
+          "type": "integer",
+          "description": "Google shows about 10 jobs per search and has no working page 2 (verified October 2026). To collect more, add more specific queries (role + city, or different locations).",
+          "default": 10,
+          "prefill": 10,
+          "minimum": 1,
+          "maximum": 10
+        },
+        "maxItems": {
+          "title": "Max jobs per run (all queries)",
+          "type": "integer",
+          "description": "Global cost ceiling: the run stops after this many job rows, across all queries. At $0.001 per job, 100 rows cost $0.10 plus proxy usage. The default single query returns about 10 jobs, so a default run costs about $0.01 plus proxy usage. Hard cap 1,000.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "concurrency": {
+          "title": "Concurrent queries",
+          "type": "integer",
+          "description": "How many queries are fetched in parallel. Higher is faster but uses more proxy sessions at once. Default 5.",
+          "default": 5,
+          "prefill": 5,
+          "minimum": 1,
+          "maximum": 10
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "website_contacts",
+    "actor": "subimpact/website-contact-extractor",
+    "title": "Website Contact & Social Extractor (Emails, Phones, Socials)",
+    "description": "Extract emails, phone numbers and social profile links (Facebook, Instagram, LinkedIn, X, TikTok, YouTube, WhatsApp, Telegram) from any list of websites. Plain HTTP, no browser, respects robots.txt. $0.80 per 1,000 pages scanned, no per-lead fee.",
+    "pricing": [
+      "Page scanned: $0.0008"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "startUrls": {
+          "title": "Website URLs or domains",
+          "type": "array",
+          "description": "One entry per website. Full URLs and bare domains are accepted, for example https://apify.com or hartamas.com. The first URL per domain is used as the start page. Duplicate domains are collapsed.",
+          "default": [
+            {
+              "url": "https://apify.com"
+            }
+          ],
+          "prefill": [
+            {
+              "url": "https://apify.com"
+            },
+            {
+              "url": "https://www.hartamas.com"
+            }
+          ]
+        },
+        "maxPagesPerSite": {
+          "title": "Max pages per site",
+          "type": "integer",
+          "description": "Pages fetched and scanned per website, including the start page. Links whose URL or anchor text mentions contact, about, team, support, legal, impressum, kontakt or hubungi are fetched first. Higher values find more contacts and cost more page-scanned events.",
+          "default": 5,
+          "prefill": 5,
+          "minimum": 1,
+          "maximum": 50
+        },
+        "maxItems": {
+          "title": "Max sites (global cap)",
+          "type": "integer",
+          "description": "Global cap on website rows delivered in one run. The default of 10 keeps a default run under $0.05 at 5 pages per site. Raise it for larger lists. Optional per-page rows are not counted against this cap and are not charged separately.",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "concurrency": {
+          "title": "Concurrent sites",
+          "type": "integer",
+          "description": "How many websites are processed at the same time. Pages within one site are fetched one at a time. Lower this if target sites rate-limit you.",
+          "default": 10,
+          "minimum": 1,
+          "maximum": 50
+        },
+        "outputPerPage": {
+          "title": "Also output one row per page",
+          "type": "boolean",
+          "description": "Adds one dataset row per successfully fetched page with that page's own contacts. These page rows are not charged separately. Billing is still per page scanned, charged once after each site row.",
+          "default": false
+        },
+        "respectRobotsTxt": {
+          "title": "Respect robots.txt",
+          "type": "boolean",
+          "description": "Check each site's robots.txt before fetching pages and skip disallowed URLs. Keep this on unless you own the sites or have permission to crawl them.",
+          "default": true
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Direct requests are the default and were measured to work for the example sites. Enable Apify datacenter or residential proxy only if target sites block the Apify IP ranges. A proxy failure fails the request and never falls back to a direct request.",
+          "default": {
+            "useApifyProxy": false
+          },
+          "prefill": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "google_trends",
+    "actor": "subimpact/google-trends-scraper-keyless",
+    "title": "Google Trends Scraper (Keyless)",
+    "description": "Scrape Google Trends interest-over-time, related queries/topics, and per-region interest for keywords. No API key, no browser, no captcha. Up to 5 keywords compared per call. From $2.50 per 1,000 keywords (less on paid plans), charged only for delivered keywords.",
+    "pricing": [
+      "Keyword trends bundle: $0.0025"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "keywords": {
+          "title": "Keyword(s)",
+          "type": "array",
+          "description": "Keywords to track. Up to 5 are compared in one Trends call; more are split into batches. Max 100.",
+          "prefill": [
+            "coffee",
+            "iced coffee"
+          ],
+          "default": [
+            "coffee",
+            "iced coffee"
+          ],
+          "maxItems": 100
+        },
+        "geo": {
+          "title": "Country code",
+          "type": "string",
+          "description": "Two-letter country code (US, MY, GB...). Leave empty for worldwide.",
+          "prefill": "US",
+          "default": "US"
+        },
+        "timeRange": {
+          "title": "Time range",
+          "type": "string",
+          "description": "Trends time range. For a custom range, run via API with 'YYYY-MM-DD YYYY-MM-DD'.",
+          "prefill": "today 12-m",
+          "default": "today 12-m"
+        },
+        "category": {
+          "title": "Category",
+          "type": "integer",
+          "description": "Google Trends category id (0 = all categories).",
+          "prefill": 0,
+          "default": 0
+        },
+        "property": {
+          "title": "Search property",
+          "type": "string",
+          "description": "Web search (''), images, news, youtube, or froogle (Google Shopping).",
+          "prefill": "",
+          "default": ""
+        },
+        "includeTimeseries": {
+          "title": "Interest over time",
+          "type": "boolean",
+          "description": "Emit timeline rows (0-100 interest per period).",
+          "prefill": true,
+          "default": true
+        },
+        "includeRelatedQueries": {
+          "title": "Related queries",
+          "type": "boolean",
+          "description": "Emit TOP + RISING related queries per keyword.",
+          "prefill": false,
+          "default": false
+        },
+        "includeRelatedTopics": {
+          "title": "Related topics",
+          "type": "boolean",
+          "description": "Emit related topics (may be empty on some egress IPs).",
+          "prefill": false,
+          "default": false
+        },
+        "includeGeoMap": {
+          "title": "Interest by region",
+          "type": "boolean",
+          "description": "Emit per-region interest rows (states/provinces of the target geo).",
+          "prefill": false,
+          "default": false
+        },
+        "maxRelatedItems": {
+          "title": "Max related items per list",
+          "type": "integer",
+          "description": "Cap per TOP/RISING list (Google returns ~25).",
+          "prefill": 25,
+          "default": 25
+        },
+        "tzOffset": {
+          "title": "Timezone offset (minutes)",
+          "type": "integer",
+          "description": "e.g. -480 for UTC+8. Affects hourly/daily bucketing.",
+          "prefill": 0,
+          "default": 0
+        },
+        "delaySeconds": {
+          "title": "Delay between requests (s)",
+          "type": "number",
+          "description": "Politeness delay. Raise if you see 429 warnings.",
+          "prefill": 1.5,
+          "default": 1.5,
+          "minimum": 0,
+          "maximum": 60
+        },
+        "batchSize": {
+          "title": "Keywords per batch",
+          "type": "integer",
+          "description": "Max keywords compared per Trends call (Google allows up to 5).",
+          "prefill": 5,
+          "default": 5,
+          "minimum": 1,
+          "maximum": 5
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. Add RESIDENTIAL proxy if datacenter IPs get throttled (HTTP 429)."
+        }
+      },
+      "required": [
+        "keywords"
+      ]
+    }
+  },
+  {
+    "tool": "web_page_markdown",
+    "actor": "subimpact/rag-web-browser-lite",
+    "title": "RAG Web Browser Lite — Cheap Markdown for AI Agents",
+    "description": "Web search and fetch tool for AI agents and RAG pipelines. Queries Google Search, scrapes the top N pages over raw HTTP, and returns clean Markdown. $0.001 per page plus small platform usage (raw HTTP, no browser).",
+    "pricing": [
+      "Page extracted: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "query": {
+          "title": "Search term or URL",
+          "type": "string",
+          "description": "Enter Google Search keywords or a URL of a specific web page. Examples:\n\n- <code>san francisco weather</code>\n- <code>https://www.cnn.com</code>\n- <code>function calling site:openai.com</code>",
+          "prefill": "web browser for RAG pipelines -site:reddit.com",
+          "default": "https://example.com"
+        },
+        "maxResults": {
+          "title": "Maximum results",
+          "type": "integer",
+          "description": "The maximum number of top organic Google Search results whose web pages will be extracted. If `query` is a URL, this field is ignored and the Actor only fetches the specific web page.",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 100
+        },
+        "outputFormats": {
+          "title": "Output formats",
+          "type": "array",
+          "description": "Select one or more formats to which the target web pages will be extracted and saved in the resulting dataset.",
+          "default": [
+            "markdown"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "text",
+              "markdown",
+              "html"
+            ],
+            "enumTitles": [
+              "Plain text",
+              "Markdown",
+              "HTML"
+            ]
+          }
+        },
+        "gl": {
+          "title": "Country code (gl)",
+          "type": "string",
+          "description": "Two-letter country code for Google Search, e.g. us, my, uk, sg.",
+          "default": "us"
+        },
+        "hl": {
+          "title": "Language code (hl)",
+          "type": "string",
+          "description": "Two-letter language code for Google Search, e.g. en, ms, zh.",
+          "default": "en"
+        },
+        "serpProxyGroup": {
+          "title": "SERP proxy group",
+          "type": "string",
+          "description": "Apify Proxy group used for fetching Google Search results.",
+          "default": "GOOGLE_SERP",
+          "enum": [
+            "GOOGLE_SERP",
+            "SHADER"
+          ]
+        },
+        "serpMaxRetries": {
+          "title": "SERP max retries",
+          "type": "integer",
+          "description": "The maximum number of times the Actor will retry fetching the Google Search results on error.",
+          "minimum": 0,
+          "maximum": 5,
+          "default": 2
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify Proxy configuration used for scraping the target web pages.",
+          "default": {
+            "useApifyProxy": true
+          },
+          "prefill": {
+            "useApifyProxy": true
+          }
+        },
+        "removeElementsCssSelector": {
+          "title": "Remove HTML elements (CSS selector)",
+          "type": "string",
+          "description": "A CSS selector matching HTML elements that will be removed from the DOM before converting to text, Markdown, or saving as HTML. Set to a non-existent selector like `dummy_keep_everything` to disable removal.",
+          "default": "nav, footer, script, style, noscript, svg, img[src^='data:'],\n[role=\"alert\"],\n[role=\"banner\"],\n[role=\"dialog\"],\n[role=\"alertdialog\"],\n[role=\"region\"][aria-label*=\"skip\" i],\n[aria-modal=\"true\"]",
+          "prefill": "nav, footer, script, style, noscript, svg, img[src^='data:'],\n[role=\"alert\"],\n[role=\"banner\"],\n[role=\"dialog\"],\n[role=\"alertdialog\"],\n[role=\"region\"][aria-label*=\"skip\" i],\n[aria-modal=\"true\"]"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "google_ads_transparency",
+    "actor": "subimpact/google-ads-transparency-scraper",
+    "title": "Google Ads Transparency Center Scraper (Advertisers & Ads)",
+    "description": "Scrape Google Ads Transparency Center: find advertisers by name or ID and export their ads with format, first and last shown dates, preview and ad links, filtered by region. No browser. $0.80 per 1,000 ads, $0.50 per 1,000 advertisers.",
+    "pricing": [
+      "Ad: $0.0008",
+      "Advertiser: $0.0005"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "searchTerms": {
+          "title": "Search terms",
+          "type": "array",
+          "description": "Advertiser names or domains, for example nike, adidas.com, samsung. Each term is resolved to advertisers through Google's public suggestion endpoint, then their ads are downloaded. An empty input ({}) searches nike.",
+          "items": {
+            "type": "string"
+          },
+          "prefill": [
+            "adidas"
+          ]
+        },
+        "advertiserIds": {
+          "title": "Advertiser IDs",
+          "type": "array",
+          "description": "Advertiser ids from the Ads Transparency Center, for example AR06641858037806006273. Skips the suggestion lookup and fetches these advertisers directly.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "region": {
+          "title": "Region",
+          "type": "string",
+          "description": "Two letter ISO country code (US, GB, DE, MY, SG, TH, ...) or anywhere. Region filtering happens on Google's side with the matching geo target id, so you get the ads shown in that country. anywhere skips the filter and returns ads from every region.",
+          "default": "anywhere",
+          "prefill": "anywhere"
+        },
+        "maxAdsPerAdvertiser": {
+          "title": "Max ads per advertiser",
+          "type": "integer",
+          "description": "Hard cap on ad rows per advertiser. Cost guard: 40 ads cost about $0.032 in ad rows. An empty API input ({}) defaults to 10; the form default is 40.",
+          "default": 40,
+          "prefill": 20,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxAdvertisersPerTerm": {
+          "title": "Max advertisers per search term",
+          "type": "integer",
+          "description": "How many matching advertisers to process for each search term, in the order Google returns them. advertiserIds are always processed in full.",
+          "default": 3,
+          "prefill": 1,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "maxItems": {
+          "title": "Max ad rows (whole run)",
+          "type": "integer",
+          "description": "Global cap on ad rows across every advertiser and every search term. Advertiser rows are not counted against it. The run stops cleanly when the cap is reached.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "concurrency": {
+          "title": "Parallel advertiser workers",
+          "type": "integer",
+          "description": "How many advertisers are fetched at the same time, each on its own proxy session. 5 is a good default; higher values finish faster and are more likely to be rate limited.",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Required. Direct requests from Apify's datacenter IPs get HTTP 429 from the Ads Transparency Center, while the Apify datacenter proxy returns 200. Keep the default, or supply your own proxyUrls.",
+          "default": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "youtube",
+    "actor": "subimpact/youtube-scraper",
+    "title": "YouTube Scraper: Videos, Shorts, Channels & Comments",
+    "description": "Fast YouTube scraper with no browser and no API key: keyword search with filters, channel videos and Shorts, channel About data, playlists, video details (exact likes, date, description) and comments with replies. $1.00 per 1,000 results.",
+    "pricing": [
+      "Result: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "searchQueries": {
+          "title": "Search Queries",
+          "type": "array",
+          "description": "Keyword searches to run. Each query yields up to 'maxResultsPerQuery' results.",
+          "prefill": [
+            "python tutorial"
+          ]
+        },
+        "startUrls": {
+          "title": "Start URLs",
+          "type": "array",
+          "description": "YouTube URLs: videos (/watch?v=, youtu.be), Shorts (/shorts/), channels (@handle, /channel/, /c/, /user/) or playlists (?list=).",
+          "prefill": [
+            {
+              "method": "GET",
+              "url": "https://www.youtube.com/@MrBeast"
+            }
+          ]
+        },
+        "maxResultsPerQuery": {
+          "title": "Max Results Per Search Query",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 500,
+          "default": 20,
+          "description": "Maximum rows per search query."
+        },
+        "maxVideosPerChannel": {
+          "title": "Max Items Per Channel Or Playlist URL",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 5000,
+          "default": 20,
+          "description": "Maximum video/short rows per channel or playlist URL."
+        },
+        "channelContent": {
+          "title": "Channel Content",
+          "type": "string",
+          "enum": [
+            "videos",
+            "shorts",
+            "both"
+          ],
+          "default": "videos",
+          "description": "Which tab to scrape for channel URLs ('videos', 'shorts' or 'both'). A /@handle/shorts URL always forces Shorts."
+        },
+        "includeChannelInfo": {
+          "title": "Include Channel Info",
+          "type": "boolean",
+          "default": true,
+          "description": "For every channel URL, also deliver one 'channel' row with subscriber counts, About-panel info and links."
+        },
+        "searchSortBy": {
+          "title": "Search Sort By",
+          "type": "string",
+          "enum": [
+            "relevance",
+            "date",
+            "views",
+            "rating"
+          ],
+          "default": "relevance",
+          "description": "Sort order for search results."
+        },
+        "searchUploadDate": {
+          "title": "Search Upload Date Filter",
+          "type": "string",
+          "enum": [
+            "any",
+            "hour",
+            "today",
+            "week",
+            "month",
+            "year"
+          ],
+          "default": "any",
+          "description": "Upload-date filter for search results."
+        },
+        "searchIncludeShorts": {
+          "title": "Include Shorts In Search",
+          "type": "boolean",
+          "default": false,
+          "description": "Also extract Shorts rows from search result shelves."
+        },
+        "enrichVideoDetails": {
+          "title": "Enrich Video Details",
+          "type": "boolean",
+          "default": false,
+          "description": "Fetch the video page for every result for exact like counts, exact publish date, full description and comment count. One extra request per video."
+        },
+        "scrapeComments": {
+          "title": "Scrape Comments",
+          "type": "boolean",
+          "default": false,
+          "description": "Also scrape comments for each video (adds 'comment' rows to the dataset)."
+        },
+        "maxCommentsPerVideo": {
+          "title": "Max Comments Per Video",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 10000,
+          "default": 20,
+          "description": "Maximum TOP-LEVEL comment rows per video. Replies are capped separately by Max Replies Per Comment and do not count toward this limit."
+        },
+        "commentsSortBy": {
+          "title": "Comments Sort By",
+          "type": "string",
+          "enum": [
+            "top",
+            "newest"
+          ],
+          "default": "top",
+          "description": "Comment order: 'top' (most upvoted) or 'newest'."
+        },
+        "includeReplies": {
+          "title": "Include Comment Replies",
+          "type": "boolean",
+          "default": false,
+          "description": "Also scrape replies to comments."
+        },
+        "maxRepliesPerComment": {
+          "title": "Max Replies Per Comment",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000,
+          "default": 5,
+          "description": "Maximum reply rows per comment thread. Reply rows do not count toward Max Comments Per Video."
+        },
+        "maxTotalResults": {
+          "title": "Max Total Results (All Inputs)",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 1000000,
+          "default": 1000,
+          "description": "Global cap on total rows across all inputs. Hard stop: no rows past this number."
+        },
+        "maxConcurrency": {
+          "title": "Max Concurrency",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 20,
+          "default": 5,
+          "description": "How many inputs are processed in parallel. Pagination inside one input is sequential."
+        },
+        "language": {
+          "title": "Language",
+          "type": "string",
+          "default": "en",
+          "description": "Interface language code (hl), e.g. 'en'."
+        },
+        "country": {
+          "title": "Country",
+          "type": "string",
+          "default": "US",
+          "description": "Two-letter country code (gl), e.g. 'US'."
+        },
+        "proxyConfiguration": {
+          "title": "Proxy Configuration",
+          "type": "object",
+          "description": "Optional. Proxies are usually not needed: the scrape works over plain HTTPS from datacenter IPs. Enable Apify Proxy only for high volumes.",
+          "default": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "tiktok_hashtag",
+    "actor": "subimpact/tiktok-hashtag-scraper",
+    "title": "TikTok Hashtag Scraper — Fast Video, Creator & Metrics",
+    "description": "High-speed TikTok hashtag scraper. Extract videos, views, likes, comments, shares, audio details, and creator profiles by hashtag at an ultra-competitive price.",
+    "pricing": [
+      "Video: $0.001"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "hashtags": {
+          "title": "Hashtag(s) to scrape from TikTok",
+          "type": "array",
+          "description": "Add TikTok hashtags to collect information about videos, views, likes, shares, comments, and creators. If not provided, the default hashtag is used.",
+          "prefill": [
+            "malaysianfood"
+          ],
+          "default": [
+            "malaysianfood"
+          ],
+          "example": [
+            "malaysianfood",
+            "klfoodie"
+          ]
+        },
+        "resultsPerPage": {
+          "title": "Max posts per hashtag",
+          "type": "integer",
+          "description": "Maximum number of posts that will be scraped for each hashtag (1–500). Values outside this range are clamped.",
+          "minimum": 1,
+          "maximum": 500,
+          "default": 20,
+          "prefill": 20
+        },
+        "dryRun": {
+          "title": "Dry Run (Validation Mode)",
+          "type": "boolean",
+          "description": "Validates hashtag parameters without extracting video data or triggering billing charges.",
+          "default": false
+        },
+        "proxyConfiguration": {
+          "title": "Proxy Configuration",
+          "type": "object",
+          "description": "Select Apify Proxy to ensure high reliability and bypass anti-scraping blocks.",
+          "default": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": [
+        "hashtags"
+      ]
+    }
+  },
+  {
+    "tool": "eventbrite_events",
+    "actor": "subimpact/eventbrite-scraper",
+    "title": "Eventbrite Scraper",
+    "description": "Scrape Eventbrite events with venue + organizer data by default. $0.002/event, usage paid by buyer. Search by city/query/category, URL mode, organizer mode, dryRun.",
+    "pricing": [
+      "Event: $0.002"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "query": {
+          "title": "Search query",
+          "type": "string",
+          "description": "Free-text search term (e.g. 'tech', 'yoga'). Optional — omit for all events in the place.",
+          "prefill": "tech"
+        },
+        "places": {
+          "title": "Place (city)",
+          "type": "array",
+          "description": "ONE city name (e.g. 'London') or raw place ID. v1 supports a single place. When set, radius is required (default 50 km).",
+          "prefill": [
+            "London"
+          ]
+        },
+        "country": {
+          "title": "Country",
+          "type": "string",
+          "description": "Filters place resolution by country (e.g. 'United States'). Accepts aitorsm's lower-case slug ('malaysia', 'united-kingdom'). No-op without places.",
+          "prefill": "United Kingdom"
+        },
+        "category": {
+          "title": "Category",
+          "type": "string",
+          "description": "Eventbrite category. Accepts our ID labels (e.g. '103: Music'), aitorsm's display labels (e.g. 'Music') or 'custom' (keyword search). Optional; blank is ignored. IDs verified against observed EventbriteCategory/* tags in probe fixtures (Probe-8/9/12).",
+          "enum": [
+            "101: Business & Professional",
+            "102: Science & Technology",
+            "103: Music",
+            "104: Film, Media & Entertainment",
+            "105: Performing & Visual Arts",
+            "106: Fashion & Beauty",
+            "107: Health & Wellness",
+            "108: Sports & Fitness",
+            "109: Travel & Outdoor",
+            "110: Food & Drink",
+            "111: Charity & Causes",
+            "112: Government & Politics",
+            "113: Community & Culture",
+            "114: Religion & Spirituality",
+            "115: Family & Education",
+            "116: Seasonal & Holiday",
+            "117: Home & Lifestyle",
+            "118: Auto, Boat & Air",
+            "119: Hobbies & Special Interest",
+            "120: School Activities",
+            "199: Other",
+            "custom",
+            "",
+            "Business & Professional",
+            "Science & Technology",
+            "Music",
+            "Film, Media & Entertainment",
+            "Performing & Visual Arts",
+            "Fashion & Beauty",
+            "Health & Wellness",
+            "Sports & Fitness",
+            "Travel & Outdoor",
+            "Food & Drink",
+            "Charity & Causes",
+            "Government & Politics",
+            "Community & Culture",
+            "Religion & Spirituality",
+            "Family & Education",
+            "Seasonal & Holiday",
+            "Home & Lifestyle",
+            "Auto, Boat & Air",
+            "Hobbies & Special Interest",
+            "School Activities",
+            "Other"
+          ]
+        },
+        "price": {
+          "title": "Price",
+          "type": "string",
+          "description": "free = free events only; paid = paid events only; blank or omitted for both. Empty strings from aitorsm inputs are ignored.",
+          "enum": [
+            "",
+            "free",
+            "paid"
+          ]
+        },
+        "onlineOnly": {
+          "title": "Online events only",
+          "type": "boolean",
+          "description": "Post-filter for online events. Mutually exclusive with places (place-scoped search returns no online events).",
+          "default": false
+        },
+        "startDate": {
+          "title": "Start date",
+          "type": "string",
+          "description": "ISO date (YYYY-MM-DD). Optional; defaults to today."
+        },
+        "endDate": {
+          "title": "End date",
+          "type": "string",
+          "description": "ISO date (YYYY-MM-DD). Optional; defaults to +1 year from startDate."
+        },
+        "sort": {
+          "title": "Sort",
+          "type": "string",
+          "description": "date = by start date (default); distance = by distance from place center (requires radius).",
+          "enum": [
+            "date",
+            "distance"
+          ],
+          "default": "date"
+        },
+        "radius": {
+          "title": "Radius (km)",
+          "type": "integer",
+          "description": "Search radius in km. REQUIRED when places is set. Default 50, max 50.",
+          "default": 50,
+          "maximum": 50,
+          "minimum": 1
+        },
+        "eventUrls": {
+          "title": "Event URLs",
+          "type": "array",
+          "description": "List of Eventbrite event URLs to scrape directly. Series URLs return a parent stub (not charged)."
+        },
+        "organizerId": {
+          "title": "Organizer ID",
+          "type": "string",
+          "description": "Scrape all events by this organizer (e.g. '120990958363')."
+        },
+        "maxEvents": {
+          "title": "Max events",
+          "type": "integer",
+          "description": "Maximum number of events to process (counts processed rows incl. duplicates). Default 1000 (above measured depth ~892 for London r50). Cap 10000.",
+          "default": 1000,
+          "maximum": 10000,
+          "minimum": 1,
+          "prefill": 10
+        },
+        "maxTotalChargeUsd": {
+          "title": "Max total charge (USD)",
+          "type": "number",
+          "description": "Bill-shock guard: stop charging once total charges reach this amount. Default 20.01 (just above 10,000 events at $0.002 — avoids the floating-point knife edge where a full-size run stops one batch early).",
+          "default": 20.01,
+          "minimum": 1,
+          "maximum": 100
+        },
+        "includeDetails": {
+          "title": "Include details",
+          "type": "boolean",
+          "description": "Fetch full event details (venue address, organizer, description, status). Default true.",
+          "default": true,
+          "prefill": true
+        },
+        "enrichDestination": {
+          "title": "Enrich destination fields",
+          "description": "Add ticket price range, sales status/window, saved flags, public collections and image renditions per event (one extra lightweight API call per event). On by default.",
+          "type": "boolean",
+          "default": true,
+          "prefill": true
+        },
+        "dryRun": {
+          "title": "Dry run",
+          "type": "boolean",
+          "description": "Count only, no charge. Still bills platform usage.",
+          "default": false
+        },
+        "keyword": {
+          "title": "Keyword (aitorsm compatibility)",
+          "type": "string",
+          "description": "Their keyword field. It is used as our query only when category is 'custom'; with a standard or blank category it is ignored, exactly like their actor. Has no effect when query is set."
+        },
+        "city": {
+          "title": "City (aitorsm compatibility)",
+          "type": "string",
+          "description": "Their city slug or name, e.g. 'kuala-lumpur' or 'Kuala Lumpur'. Used as a single place when places is empty. Has no effect when places is set."
+        },
+        "maxResults": {
+          "title": "Max results (aitorsm compatibility)",
+          "type": "integer",
+          "description": "Their maxResults field. Maps to maxEvents when maxEvents is absent or still at its default of 1000. Has no effect on an explicit non-default maxEvents.",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "enrichOrganizers": {
+          "title": "Enrich organizers (aitorsm compatibility)",
+          "type": "boolean",
+          "description": "Their organizer-enrichment switch. false means no extra organizer calls. Our actor already includes organizer name/url/website/facebook/twitter from event details; true does not add their quality signals or extra social links."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "company_career_jobs",
+    "actor": "subimpact/ats-jobs-api",
+    "title": "Company Career Page Monitor & ATS Jobs API",
+    "description": "Get live job postings straight from company career pages — Greenhouse, Lever, Ashby, Workday, SmartRecruiters — normalized into one schema, with new-job monitoring for HR-tech, VCs, and AI agents.",
+    "pricing": [
+      "Job scraped: $0.001",
+      "Company monitored: $0.02"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "companies": {
+          "title": "Companies",
+          "type": "array",
+          "description": "Careers page or ATS board URLs to scrape, e.g. https://boards.greenhouse.io/anthropic, https://jobs.ashbyhq.com/OpenAI, https://nvidia.wd5.myworkdayjobs.com/en-US/NVIDIAExternalCareerSite, https://recruiting.ultipro.com/{tenant}/JobBoard/{boardId}, https://{company}.jobs.personio.de",
+          "prefill": [
+            "https://boards.greenhouse.io/anthropic"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "includeDescription": {
+          "title": "Include full job descriptions",
+          "type": "boolean",
+          "description": "Fetch full description text/HTML for each job. Slower and uses more requests, especially on Workday and Ashby.",
+          "default": false
+        },
+        "includeDetails": {
+          "title": "Include per-job details",
+          "type": "boolean",
+          "description": "Fetch each job's detail page for richer fields (Workday: location, employment type, description). Adds one request per job.",
+          "default": false
+        },
+        "maxJobsPerCompany": {
+          "title": "Max jobs per company",
+          "type": "integer",
+          "description": "Cap the number of jobs collected per company. 0 = no limit.",
+          "default": 0,
+          "minimum": 0
+        },
+        "maxTotalJobs": {
+          "title": "Max total jobs (all companies)",
+          "type": "integer",
+          "description": "Global cap on jobs delivered across ALL companies in one run. Defaults to 200 to prevent bill shock — raise it once you know what you need, or set 0 for no limit. Monitoring state is tracked for every scraped job regardless of this cap.",
+          "default": 200,
+          "prefill": 50,
+          "minimum": 0
+        },
+        "onlyNewJobs": {
+          "title": "Monitoring mode — only new jobs",
+          "type": "boolean",
+          "description": "Output only jobs not seen in previous runs (state persists across runs). Ideal for scheduled runs with a webhook to Slack/CRM.",
+          "default": false
+        },
+        "stateStoreName": {
+          "title": "State store name",
+          "type": "string",
+          "description": "Named key-value store used to remember previously seen jobs.",
+          "default": "ats-jobs-state"
+        }
+      },
+      "required": [
+        "companies"
+      ]
+    }
+  },
+  {
+    "tool": "substack",
+    "actor": "subimpact/substack-intel-api",
+    "title": "Substack Intel API — Posts, Archives & Publication Stats",
+    "description": null,
+    "pricing": [
+      "Run started: $5e-05",
+      "Post or publication row: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "publication": {
+          "title": "Publication",
+          "type": "string",
+          "description": "Substack slug (e.g. 'a16z') or custom domain (e.g. 'stratechery.com'). For custom domains, the substack slug is preferred when known.",
+          "prefill": "a16z",
+          "default": "a16z"
+        },
+        "mode": {
+          "title": "Mode",
+          "type": "string",
+          "description": "What to fetch: archive (recent posts list), post (full post by slug), publication (publication profile + stats).",
+          "enum": [
+            "archive",
+            "post",
+            "publication"
+          ],
+          "prefill": "archive"
+        },
+        "maxItems": {
+          "title": "Max items",
+          "type": "integer",
+          "description": "Max posts to return in archive mode (0 = uncapped, safely limited to 5000).",
+          "default": 10,
+          "minimum": 0,
+          "maximum": 5000
+        },
+        "postSlug": {
+          "title": "Post slug",
+          "type": "string",
+          "description": "Post slug for post mode (e.g. 'investing-in-gimlet')."
+        }
+      },
+      "required": [
+        "publication"
+      ]
+    }
+  },
+  {
+    "tool": "bluesky",
+    "actor": "subimpact/bluesky-scraper-api",
+    "title": "Bluesky Scraper API — Posts, Profiles, Threads & Followers",
+    "description": "Scrape Bluesky posts, profiles, threads, and follower graphs by keyword, hashtag, or handle. No login required. Fast AT Protocol API, JSON/CSV export, pay only per result.",
+    "pricing": [
+      "Post scraped: $0.001",
+      "Profile scraped: $0.002"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "mode": {
+          "title": "Scrape Mode",
+          "type": "string",
+          "enum": [
+            "search",
+            "author_feed",
+            "thread",
+            "profile",
+            "followers",
+            "follows"
+          ],
+          "description": "What to scrape: search (posts by keyword/hashtag), author_feed (recent posts by a handle), thread (full thread with nested replies), profile (profile metadata), followers (follower graph), follows (following list).",
+          "default": "search"
+        },
+        "query": {
+          "title": "Search Query",
+          "type": "string",
+          "description": "Keyword, hashtag, or query string (e.g. 'artificial intelligence', '#bluesky', 'startup'). Required in 'search' mode.",
+          "prefill": "artificial intelligence",
+          "default": "artificial intelligence"
+        },
+        "handle": {
+          "title": "Handle or DID",
+          "type": "string",
+          "description": "Bluesky handle (e.g. 'bsky.app', 'jay.bsky.team') or DID ('did:plc:...'). Required in author_feed, profile, followers, follows modes.",
+          "prefill": "bsky.app"
+        },
+        "postUri": {
+          "title": "Post URI or URL",
+          "type": "string",
+          "description": "Full AT-URI ('at://did:plc:.../app.bsky.feed.post/...') or web URL ('https://bsky.app/profile/.../post/...'). Required in 'thread' mode."
+        },
+        "sort": {
+          "title": "Search Sort Order",
+          "type": "string",
+          "enum": [
+            "latest",
+            "top"
+          ],
+          "default": "latest",
+          "description": "Sort order for search mode: 'latest' (chronological) or 'top' (highest engagement)."
+        },
+        "maxItems": {
+          "title": "Max Results",
+          "type": "integer",
+          "minimum": 1,
+          "maximum": 50000,
+          "default": 100,
+          "description": "Maximum number of posts or profiles to scrape. Pay-per-event charges only for items successfully extracted."
+        },
+        "includeReplies": {
+          "title": "Include Replies in Thread",
+          "type": "boolean",
+          "default": true,
+          "description": "When in 'thread' mode, whether to recursively traverse and extract nested reply posts."
+        },
+        "proxyConfiguration": {
+          "title": "Proxy Configuration",
+          "type": "object",
+          "description": "Select Apify Proxy (RESIDENTIAL recommended for high-volume author feeds or searches to avoid rate limits).",
+          "default": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    }
+  },
+  {
+    "tool": "lazada_products",
+    "actor": "subimpact/lazada-scraper",
+    "title": "Lazada Scraper + Price Monitor — SEA Search & Price Alerts",
+    "description": "Scrape Lazada search results and category pages across 6 SEA markets (MY/SG/TH/ID/PH/VN) with a real browser session via Apify residential proxy. Monitor price drops, stock flips and sold counts with scheduled runs and webhook alerts. $0.005 start + $0.00099/product + $0.003/check + $0.01/alert.",
+    "pricing": [
+      "Product scraped: $0.00099",
+      "Product checked: $0.003",
+      "Alert created: $0.01"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "country": {
+          "title": "Country",
+          "type": "string",
+          "description": "Lazada market to scrape. Each country uses its own domain (my → lazada.com.my, sg → lazada.sg, etc.).",
+          "enum": [
+            "my",
+            "sg",
+            "th",
+            "id",
+            "ph",
+            "vn"
+          ],
+          "enumTitles": [
+            "Malaysia",
+            "Singapore",
+            "Thailand",
+            "Indonesia",
+            "Philippines",
+            "Vietnam"
+          ],
+          "default": "my",
+          "prefill": "my"
+        },
+        "mode": {
+          "title": "Mode",
+          "type": "string",
+          "description": "search = keyword search (use queries). category = browse a category page (use categoryUrls).",
+          "enum": [
+            "search",
+            "category"
+          ],
+          "enumTitles": [
+            "Keyword search",
+            "Category browse"
+          ],
+          "default": "search",
+          "prefill": "search"
+        },
+        "queries": {
+          "title": "Search queries",
+          "type": "array",
+          "description": "Keywords to search for. One keyword per line. Example: [\"iphone 15\", \"samsung galaxy\"]. Required when mode=search. Max 20 entries (extra entries are dropped).",
+          "prefill": [
+            "iphone"
+          ]
+        },
+        "categoryUrls": {
+          "title": "Category URLs",
+          "type": "array",
+          "description": "Lazada category browse URLs. Example: https://www.lazada.com.my/shop-mobiles/ Required when mode=category. Max 20 entries (extra entries are dropped)."
+        },
+        "maxResultsPerQuery": {
+          "title": "Max results per query",
+          "type": "integer",
+          "description": "Maximum products to collect per keyword or category URL. This is your cost ceiling: products scraped × $0.00099. Hard cap: 5000.",
+          "default": 1000,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "sort": {
+          "title": "Sort order",
+          "type": "string",
+          "description": "Result sort order. Popularity = Lazada's default ranking.",
+          "enum": [
+            "popularity",
+            "priceasc",
+            "pricedesc"
+          ],
+          "enumTitles": [
+            "Popularity (default)",
+            "Price: Low to High",
+            "Price: High to Low"
+          ],
+          "default": "popularity",
+          "prefill": "popularity"
+        },
+        "minPrice": {
+          "title": "Min price filter",
+          "type": "integer",
+          "description": "Optional. Keep only products with price ≥ this value (in local currency units)."
+        },
+        "maxPrice": {
+          "title": "Max price filter",
+          "type": "integer",
+          "description": "Optional. Keep only products with price ≤ this value (in local currency units)."
+        },
+        "monitor": {
+          "title": "Enable price monitor",
+          "type": "boolean",
+          "description": "Compare current prices/stock with the previous run's snapshot. Generates alerts for price changes, stock flips and sold-count deltas. Schedule this Actor to run regularly to get ongoing alerts.",
+          "default": false
+        },
+        "monitorWatchList": {
+          "title": "Monitor watch list",
+          "type": "array",
+          "description": "Specific products to monitor. Each entry: { \"itemId\": \"123\", \"targetPrice\": 99 } or { \"itemUrl\": \"//www.lazada.com.my/products/pdp-i123.html\" }. Leave empty to monitor all products from your queries."
+        },
+        "webhookUrl": {
+          "title": "Webhook URL",
+          "type": "string",
+          "description": "Optional. When price/stock alerts fire, POST the alert payload (JSON) to this URL."
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify Proxy settings. A residential proxy is required: Lazada blocks datacenter IPs, so the Actor fetches through a real browser session on a residential IP. The proxy country is matched to the selected Lazada market automatically unless you set apifyProxyCountry yourself.",
+          "prefill": {
+            "useApifyProxy": true,
+            "apifyProxyGroups": [
+              "RESIDENTIAL"
+            ]
+          },
+          "default": {
+            "useApifyProxy": true,
+            "apifyProxyGroups": [
+              "RESIDENTIAL"
+            ]
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "jsonld_entities",
+    "actor": "subimpact/jsonld-entity-graph-resolver",
+    "title": "JSON-LD Entity Graph Resolver — Schema.org to Knowledge Graph",
+    "description": "Extract deeply nested JSON-LD, validate against Schema.org (979 types, 1,633 properties), and resolve disconnected blocks into one unified knowledge graph with typed edges. No browser, no API keys, no LLM. First 3 pages free.",
+    "pricing": [
+      "Actor start: $5e-05",
+      "Page processed: $0.0015"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "startUrls": {
+          "title": "Start URLs",
+          "type": "array",
+          "description": "List of pages to extract JSON-LD from. Each entry: {\"url\": \"https://...\"}",
+          "prefill": [
+            {
+              "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
+            },
+            {
+              "url": "https://www.bbc.com/news"
+            }
+          ],
+          "default": [
+            {
+              "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
+            }
+          ]
+        },
+        "validateSchema": {
+          "title": "Validate against Schema.org",
+          "type": "boolean",
+          "description": "Check every @type and property against the bundled Schema.org ontology (979 types, 1,633 properties). Reports unknown types and invalid properties per page.",
+          "default": true
+        },
+        "resolveGraph": {
+          "title": "Build unified knowledge graph",
+          "type": "boolean",
+          "description": "Resolve @id references across all blocks on the page and emit a unified graph: nodes (id, types, properties) + edges (subject, predicate, object). Disconnected schemas become one graph.",
+          "default": true
+        },
+        "includeRawBlocks": {
+          "title": "Include raw JSON-LD blocks",
+          "type": "boolean",
+          "description": "Also store the parsed JSON-LD blocks verbatim in each row (useful for debugging or downstream processing).",
+          "default": false
+        },
+        "maxChargeUsd": {
+          "title": "Max charge (USD)",
+          "type": "number",
+          "description": "Hard ceiling on what this run may charge. Once reached, no further events are billed.",
+          "default": 5,
+          "minimum": 0
+        },
+        "maxPages": {
+          "title": "Max pages per run",
+          "type": "integer",
+          "description": "Hard limit on how many URLs this run may request. Leave empty for no limit.",
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "estimateOnly": {
+          "title": "Estimate only (dry run)",
+          "type": "boolean",
+          "description": "Run the full extraction and report what it would cost, without charging anything.",
+          "default": false
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify proxy for IP rotation. Leave default for automatic proxy.",
+          "prefill": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": [
+        "startUrls"
+      ]
+    }
+  },
+  {
+    "tool": "seo_page_audit",
+    "actor": "subimpact/seo-helper",
+    "title": "SEO Helper (on-page audit + SERP preview)",
+    "description": "Port of the SEO Minion extension as an API: full on-page audits per URL (meta tags, headings, images, links, structured data, hreflang) plus Google SERP snippet previews with truncation flags. No API keys needed.",
+    "pricing": [
+      "page audit: $0.001",
+      "SERP preview: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "mode": {
+          "type": "string",
+          "enum": [
+            "onpage",
+            "serp_preview"
+          ],
+          "default": "onpage",
+          "description": "onpage = audit URLs; serp_preview = Google snippet preview with truncation flags",
+          "title": "Mode"
+        },
+        "pageUrls": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "https://example.com"
+          ],
+          "prefill": [
+            "https://example.com"
+          ],
+          "description": "URLs to audit (onpage mode) or preview (serp_preview mode). Leave empty for a one-URL demo run.",
+          "title": "Page URLs"
+        },
+        "maxUrls": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "Optional cap on how many URLs are processed per run. Leave empty for no limit.",
+          "title": "Max URLs (optional)"
+        },
+        "serpOverrides": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "properties": {
+              "url": {
+                "type": "string",
+                "title": "URL",
+                "description": "URL this override applies to"
+              },
+              "title": {
+                "type": "string",
+                "title": "Title",
+                "description": "Custom title"
+              },
+              "description": {
+                "type": "string",
+                "title": "Description",
+                "description": "Custom description"
+              }
+            }
+          },
+          "description": "Optional title/description overrides per URL for serp_preview mode (used instead of the live page)",
+          "title": "SERP overrides"
+        },
+        "useLivePage": {
+          "type": "boolean",
+          "default": true,
+          "description": "serp_preview: pull title/description from the live page before applying overrides",
+          "title": "Use live page"
+        },
+        "includeLinks": {
+          "type": "boolean",
+          "default": true,
+          "description": "onpage: include the full link list + image lists in the audit record",
+          "title": "Include link list"
+        },
+        "fetchTimeoutSec": {
+          "type": "integer",
+          "minimum": 5,
+          "maximum": 120,
+          "default": 30,
+          "description": "Per-page fetch timeout in seconds",
+          "title": "Fetch timeout (s)"
+        },
+        "proxyUrl": {
+          "type": "string",
+          "description": "Optional HTTP(S) proxy for page fetches",
+          "title": "Proxy URL"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "pinterest",
+    "actor": "subimpact/pinterest-scraper",
+    "title": "Pinterest Scraper — Search, Boards & Profiles",
+    "description": "Scrape Pinterest pins from keyword search, boards and profiles. Full-res originals, video variants, board/pinner metadata, repin counts. Pure HTTP - no browser, no login, no API key, no proxy.",
+    "pricing": [
+      "Pin scraped: $0.00199",
+      "Media downloaded: $0.005"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "mode": {
+          "title": "Mode",
+          "type": "string",
+          "description": "search = keyword search (use queries). board = every pin on a board (use boardUrls or boardIds). profile = every pin a user has published (use usernames).",
+          "enum": [
+            "search",
+            "board",
+            "profile"
+          ],
+          "enumTitles": [
+            "Keyword search",
+            "Board pins",
+            "Profile pins"
+          ],
+          "default": "search",
+          "prefill": "search"
+        },
+        "queries": {
+          "title": "Search queries",
+          "type": "string",
+          "description": "Comma-separated search keywords, e.g. `ai wallpaper, minimal interior`. Required when mode=search — leave empty to use the default query `ai wallpaper`. NOTE: Pinterest's search payload contains images only — no title, description, board or pinner. Turn on \"Enrich pin details\" if you need those fields.",
+          "default": "ai wallpaper",
+          "prefill": "ai wallpaper"
+        },
+        "boardUrls": {
+          "title": "Board URLs",
+          "type": "string",
+          "description": "Comma-separated board URLs or paths, e.g. `https://www.pinterest.com/les_bons_details/interior-design/` or `/les_bons_details/interior-design/`. The numeric board id is resolved automatically from the board page. Used when mode=board."
+        },
+        "boardIds": {
+          "title": "Board IDs",
+          "type": "string",
+          "description": "Comma-separated numeric board ids, e.g. `286612032474627954`. Faster than boardUrls (skips the id-resolution request). Used when mode=board."
+        },
+        "usernames": {
+          "title": "Profile usernames",
+          "type": "string",
+          "description": "Comma-separated Pinterest usernames, e.g. `ohuhu, nasa`. A leading @ and full profile URLs are accepted. Required when mode=profile."
+        },
+        "maxPinsPerSource": {
+          "title": "Max pins per source",
+          "type": "integer",
+          "description": "Maximum pins to collect per query / board / profile. This is your cost ceiling: pins scraped × the per-pin price. Hard cap: 5000.",
+          "default": 500,
+          "prefill": 500,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "maxPinsTotal": {
+          "title": "Max pins total (all sources combined)",
+          "type": "integer",
+          "description": "Optional global cap across EVERY query / board / profile in the run, on top of max pins per source. Leave empty for no global cap (unlimited). Use this to keep long multi-source runs inside the 1-hour platform timeout.",
+          "minimum": 1
+        },
+        "imageSize": {
+          "title": "Image size",
+          "type": "string",
+          "description": "Which image variant to put in `imageUrl` (and to download when media download is on). `orig` is the full-resolution original.",
+          "enum": [
+            "orig",
+            "736x",
+            "474x"
+          ],
+          "enumTitles": [
+            "Original (full resolution)",
+            "736px wide",
+            "474px wide"
+          ],
+          "default": "orig",
+          "prefill": "orig"
+        },
+        "downloadMedia": {
+          "title": "Download media files",
+          "type": "boolean",
+          "description": "Download each pin's image (or MP4 for video pins) into the run's key-value store and link it from the dataset row. Billed per file downloaded. Off by default — the image URLs in the dataset are directly usable.",
+          "default": false
+        },
+        "enrichDetails": {
+          "title": "Enrich pin details",
+          "type": "boolean",
+          "description": "Fetch each pin's detail endpoint for extra fields. Costs one extra HTTP request per pin, so runs take noticeably longer. Worth it in search mode; usually redundant in board/profile mode, where pins already arrive with full metadata. Without a login, the detail endpoint returns a reduced field set (SEO title/description, creator) — not the complete pin record.",
+          "default": false
+        },
+        "includeRaw": {
+          "title": "Include raw payload",
+          "type": "boolean",
+          "description": "Keep the untouched Pinterest pin object in the `raw` column. Turn off for smaller datasets.",
+          "default": true
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Not required — Pinterest's resource API responds normally to datacenter IPs. Kept as an escape hatch in case an exit IP gets throttled.",
+          "default": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    }
+  }
+]
