@@ -1,0 +1,31 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.subimpact/data-mcp",
+  "title": "subimpact data (Apify)",
+  "description": "Google SERP + AI Overviews, AI Mode, SEA news mentions, Maps, Jobs, Trends and 13 more data tools.",
+  "repository": {
+    "url": "https://github.com/subimpact/data-mcp",
+    "source": "github"
+  },
+  "websiteUrl": "https://apify.com/subimpact",
+  "version": "1.0.0",
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "@subimpact/data-mcp",
+      "version": "1.0.0",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "APIFY_TOKEN",
+          "description": "Your Apify API token. Runs are billed to your Apify account at each actor's Store price.",
+          "isRequired": true,
+          "isSecret": true,
+          "format": "string"
+        }
+      ]
+    }
+  ]
+}

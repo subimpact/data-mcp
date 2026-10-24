@@ -214,8 +214,12 @@ async function collectRunResults(
     }),
   ]);
 
-  const total = dataset.itemCount ?? dataset.cleanItemCount ?? items.length;
   const returned = items.length;
+  // Dataset metadata (itemCount) can lag a few seconds behind a just-finished run,
+  // so never report fewer items than were actually returned.
+  const reported = Math.max(dataset.itemCount ?? 0, dataset.cleanItemCount ?? 0);
+  const total = Math.max(reported, options.offset + returned);
+  const mayHaveMore = reported < options.offset + returned && returned >= options.maxItems;
   const payload: Record<string, unknown> = {};
   if (options.actorLabel) payload.actor = options.actorLabel;
   payload.runId = run.id;
@@ -231,6 +235,8 @@ async function collectRunResults(
     const shownFrom = options.offset + 1;
     const shownTo = options.offset + returned;
     payload.note = `Showing dataset items ${shownFrom}-${shownTo} of ${total}. Increase _maxItems (max 1000) or page with offset to fetch more.`;
+  } else if (mayHaveMore) {
+    payload.note = `Returned ${returned} item(s), the _maxItems limit; the run may have more. Call get_run_results with this runId and offset ${options.offset + returned} to fetch the rest.`;
   }
   return jsonResult(payload);
 }
