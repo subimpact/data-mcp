@@ -59,8 +59,8 @@
           "type": "integer",
           "description": "Upper bound on total fetches per query when a deferred AI Overview shell is detected. 1 = single fetch (same as retryDeferredAIO=false). Higher = better recovery odds, more proxy usage on affected queries. Range 1-5.",
           "default": 2,
-          "maximum": 5,
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 5
         },
         "captureRawHtml": {
           "title": "Capture raw HTML",
@@ -73,8 +73,8 @@
           "type": "integer",
           "description": "Number of parallel queries (1-30, default 10). A/B measured: 20 queries at c5=34s, c10=35s, c20=65s — the SERP proxy pool is the bottleneck, so beyond ~10 workers latency balloons. 10 gives the same throughput as 5 with headroom for AI-Overview-heavy sets.",
           "default": 10,
-          "maximum": 30,
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 30
         },
         "retryDeferredPoll": {
           "title": "Legacy poll re-fetch (deferred AIO)",
@@ -93,8 +93,8 @@
           "type": "integer",
           "description": "Upper bound on total fetches per query when organic results are missing (retryPartialResults=true). 1 = no re-fetch, 2 = one re-fetch, 3 = two re-fetches. Range 1-3.",
           "default": 1,
-          "maximum": 3,
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 3
         },
         "resolveGotoTokens": {
           "title": "Resolve /goto citation tokens via redirect",
@@ -180,14 +180,13 @@
         "skipCache": {
           "title": "Skip cache (always fetch fresh)",
           "type": "boolean",
-          "default": false,
-          "description": "By default, a question that was answered for the same country, language and location in the last hour may be served from our cache (marked cached: true, with cached_at). Turn this on to always fetch a fresh answer from Google, for example when tracking how answers change. Fresh answers take longer under heavy load."
+          "description": "By default, a question that was answered for the same country, language and location in the last hour may be served from our cache (marked cached: true, with cached_at). Turn this on to always fetch a fresh answer from Google, for example when tracking how answers change. Fresh answers take longer under heavy load.",
+          "default": false
         },
         "backend": {
           "title": "Backend",
           "type": "string",
           "description": "android (default) = real AI Mode tab (udm=50) rendered in Android Chrome: full answer, structured blocks, resolved source URLs. http = legacy browserless SERP fetch (only returns AI answers Google embeds in the classic results page; uses gl/hl/location/udm50/retry options below).",
-          "default": "android",
           "enum": [
             "android",
             "http"
@@ -195,15 +194,16 @@
           "enumTitles": [
             "Android Chrome (real AI Mode tab)",
             "Legacy browserless (classic SERP)"
-          ]
+          ],
+          "default": "android"
         },
         "concurrency": {
           "title": "Concurrency",
           "type": "integer",
           "description": "Parallel queries (1-30). On the android backend this is capped automatically to the size of the browser pool.",
           "default": 10,
-          "maximum": 30,
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 30
         },
         "udm50": {
           "title": "Force AI Mode tab (udm=50)",
@@ -222,8 +222,8 @@
           "type": "integer",
           "description": "[legacy http backend only] Upper bound on recovery fetches per query (1-5).",
           "default": 2,
-          "maximum": 5,
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 5
         },
         "captureRawHtml": {
           "title": "Save raw HTML",
@@ -252,11 +252,11 @@
           "title": "🔎 Keywords / queries",
           "type": "array",
           "description": "1–100 search queries. Defaults to a demo query when omitted. Query syntax: words are ANDed by default (petronas profit = both words); \"exact phrase\" in double quotes; OR between terms (uppercase); -term or -\"phrase\" excludes. Example: Petronas OR \"Petronas Dagangan\" -sponsored.",
-          "prefill": [
+          "default": [
             "Petronas",
             "\"electric vehicle\" Malaysia"
           ],
-          "default": [
+          "prefill": [
             "Petronas",
             "\"electric vehicle\" Malaysia"
           ],
@@ -265,11 +265,11 @@
             "\"electric vehicle\" Malaysia",
             "Grab OR foodpanda -promo"
           ],
-          "minItems": 1,
-          "maxItems": 100,
           "items": {
             "type": "string"
-          }
+          },
+          "minItems": 1,
+          "maxItems": 100
         },
         "excludeKeywords": {
           "title": "🚫 Exclude terms (added to every query)",
@@ -424,8 +424,8 @@
   {
     "tool": "google_maps_places",
     "actor": "subimpact/google-maps-scraper-plainhttp",
-    "title": "Google Maps Scraper",
-    "description": "Extract Google Maps places: title, address, coords, phone, website, rating, reviews count, opening hours, popular times, images, price level, menu, place ID. Search by keyword + location or place IDs. Plain-HTTP internal API, no browser, fast and cheap. $1.00 per 1,000 places.",
+    "title": "Google Maps Scraper: Places, Phones & Reviews, No Browser",
+    "description": "Extract Google Maps places with phone, website, rating, reviews, opening hours, popular times, images and place ID. Plain HTTP, no browser, $1.00 per 1,000 places. Accepts compass/crawler-google-places input unchanged.",
     "pricing": [
       "Place scraped: $0.001",
       "Review scraped: $0.0005",
@@ -461,6 +461,7 @@
         "language": {
           "title": "Language",
           "type": "string",
+          "description": "Results language.",
           "enum": [
             "en",
             "de",
@@ -478,32 +479,31 @@
             "ar",
             "hi"
           ],
-          "default": "en",
-          "description": "Results language."
+          "default": "en"
         },
         "maxCrawledPlacesPerSearch": {
           "title": "Max places",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 200,
-          "default": 50,
           "description": "Max places per search term (compass semantics). Each search string can return up to this many places; a run with N terms returns up to N x this. Detail records are charged per place.",
-          "prefill": 50
+          "default": 50,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 200
         },
         "maxReviews": {
           "title": "Reviews per place ($)",
           "type": "integer",
-          "minimum": 0,
-          "maximum": 99999,
-          "default": 0,
           "description": "Number of reviews to extract per place. 0 = none. Each review = review-scraped charge.",
-          "prefill": 0
+          "default": 0,
+          "prefill": 0,
+          "minimum": 0,
+          "maximum": 99999
         },
         "scrapePlaceDetailPage": {
           "title": "Scrape place detail page",
           "type": "boolean",
-          "default": true,
-          "description": "Open each place's detail payload (phone, hours, popular times, images, price). Off = search-level records only."
+          "description": "Open each place's detail payload (phone, hours, popular times, images, price). Off = search-level records only.",
+          "default": true
         },
         "placeIds": {
           "title": "Place IDs (ChIJ...)",
@@ -694,11 +694,11 @@
           "title": "Keyword(s)",
           "type": "array",
           "description": "Keywords to track. Up to 5 are compared in one Trends call; more are split into batches. Max 100.",
-          "prefill": [
+          "default": [
             "coffee",
             "iced coffee"
           ],
-          "default": [
+          "prefill": [
             "coffee",
             "iced coffee"
           ],
@@ -708,78 +708,78 @@
           "title": "Country code",
           "type": "string",
           "description": "Two-letter country code (US, MY, GB...). Leave empty for worldwide.",
-          "prefill": "US",
-          "default": "US"
+          "default": "US",
+          "prefill": "US"
         },
         "timeRange": {
           "title": "Time range",
           "type": "string",
           "description": "Trends time range. For a custom range, run via API with 'YYYY-MM-DD YYYY-MM-DD'.",
-          "prefill": "today 12-m",
-          "default": "today 12-m"
+          "default": "today 12-m",
+          "prefill": "today 12-m"
         },
         "category": {
           "title": "Category",
           "type": "integer",
           "description": "Google Trends category id (0 = all categories).",
-          "prefill": 0,
-          "default": 0
+          "default": 0,
+          "prefill": 0
         },
         "property": {
           "title": "Search property",
           "type": "string",
           "description": "Web search (''), images, news, youtube, or froogle (Google Shopping).",
-          "prefill": "",
-          "default": ""
+          "default": "",
+          "prefill": ""
         },
         "includeTimeseries": {
           "title": "Interest over time",
           "type": "boolean",
           "description": "Emit timeline rows (0-100 interest per period).",
-          "prefill": true,
-          "default": true
+          "default": true,
+          "prefill": true
         },
         "includeRelatedQueries": {
           "title": "Related queries",
           "type": "boolean",
           "description": "Emit TOP + RISING related queries per keyword.",
-          "prefill": false,
-          "default": false
+          "default": false,
+          "prefill": false
         },
         "includeRelatedTopics": {
           "title": "Related topics",
           "type": "boolean",
           "description": "Emit related topics (may be empty on some egress IPs).",
-          "prefill": false,
-          "default": false
+          "default": false,
+          "prefill": false
         },
         "includeGeoMap": {
           "title": "Interest by region",
           "type": "boolean",
           "description": "Emit per-region interest rows (states/provinces of the target geo).",
-          "prefill": false,
-          "default": false
+          "default": false,
+          "prefill": false
         },
         "maxRelatedItems": {
           "title": "Max related items per list",
           "type": "integer",
           "description": "Cap per TOP/RISING list (Google returns ~25).",
-          "prefill": 25,
-          "default": 25
+          "default": 25,
+          "prefill": 25
         },
         "tzOffset": {
           "title": "Timezone offset (minutes)",
           "type": "integer",
           "description": "e.g. -480 for UTC+8. Affects hourly/daily bucketing.",
-          "prefill": 0,
-          "default": 0
+          "default": 0,
+          "prefill": 0
         },
         "delaySeconds": {
           "title": "Delay between requests (s)",
           "type": "number",
           "description": "Politeness delay. Raise if you see 429 warnings.",
-          "prefill": 1.5,
           "default": 1.5,
+          "prefill": 1.5,
           "minimum": 0,
           "maximum": 60
         },
@@ -787,8 +787,8 @@
           "title": "Keywords per batch",
           "type": "integer",
           "description": "Max keywords compared per Trends call (Google allows up to 5).",
-          "prefill": 5,
           "default": 5,
+          "prefill": 5,
           "minimum": 1,
           "maximum": 5
         },
@@ -818,8 +818,8 @@
           "title": "Search term or URL",
           "type": "string",
           "description": "Enter Google Search keywords or a URL of a specific web page. Examples:\n\n- <code>san francisco weather</code>\n- <code>https://www.cnn.com</code>\n- <code>function calling site:openai.com</code>",
-          "prefill": "web browser for RAG pipelines -site:reddit.com",
-          "default": "https://example.com"
+          "default": "https://example.com",
+          "prefill": "web browser for RAG pipelines -site:reddit.com"
         },
         "maxResults": {
           "title": "Maximum results",
@@ -866,19 +866,19 @@
           "title": "SERP proxy group",
           "type": "string",
           "description": "Apify Proxy group used for fetching Google Search results.",
-          "default": "GOOGLE_SERP",
           "enum": [
             "GOOGLE_SERP",
             "SHADER"
-          ]
+          ],
+          "default": "GOOGLE_SERP"
         },
         "serpMaxRetries": {
           "title": "SERP max retries",
           "type": "integer",
           "description": "The maximum number of times the Actor will retry fetching the Google Search results on error.",
+          "default": 2,
           "minimum": 0,
-          "maximum": 5,
-          "default": 2
+          "maximum": 5
         },
         "proxyConfiguration": {
           "title": "Proxy configuration",
@@ -918,12 +918,12 @@
           "title": "Search terms",
           "type": "array",
           "description": "Advertiser names or domains, for example nike, adidas.com, samsung. Each term is resolved to advertisers through Google's public suggestion endpoint, then their ads are downloaded. An empty input ({}) searches nike.",
-          "items": {
-            "type": "string"
-          },
           "prefill": [
             "adidas"
-          ]
+          ],
+          "items": {
+            "type": "string"
+          }
         },
         "advertiserIds": {
           "title": "Advertiser IDs",
@@ -1020,51 +1020,79 @@
         "maxResultsPerQuery": {
           "title": "Max Results Per Search Query",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 500,
+          "description": "Maximum rows per search query.",
           "default": 20,
-          "description": "Maximum rows per search query."
+          "minimum": 1,
+          "maximum": 500
         },
         "maxVideosPerChannel": {
           "title": "Max Items Per Channel Or Playlist URL",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 5000,
+          "description": "Maximum video/short rows per channel or playlist URL.",
           "default": 20,
-          "description": "Maximum video/short rows per channel or playlist URL."
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "channelSource": {
+          "title": "Channel Source",
+          "type": "string",
+          "description": "How channel URLs are scraped. 'tabs' reads the channel Videos/Shorts tabs over YouTube's internal API. 'rss' reads YouTube's public uploads feed (one small request per channel, the 15 newest uploads including Shorts and live streams). Video URLs and searchQueries behave the same in both modes.",
+          "enum": [
+            "tabs",
+            "rss"
+          ],
+          "default": "tabs"
+        },
+        "onlyNewVideos": {
+          "title": "Only New Videos (RSS mode)",
+          "type": "boolean",
+          "description": "RSS mode: deliver only video ids not delivered by an earlier run of this actor. Delivered ids are kept in a named key-value store in your account (stateStoreName). Leave off for the first run.",
+          "default": false
+        },
+        "stateStoreName": {
+          "title": "State Store Name",
+          "type": "string",
+          "description": "Named key-value store that holds the delivered ids for onlyNewVideos. 1-63 letters, digits or dashes.",
+          "default": "youtube-scraper-state"
+        },
+        "publishedAfter": {
+          "title": "Published After (RSS mode)",
+          "type": "string",
+          "description": "RSS mode: skip feed entries published before this date or datetime, for example 2026-10-01 or 2026-10-01T00:00:00Z. Leave empty for no cutoff."
         },
         "channelContent": {
           "title": "Channel Content",
           "type": "string",
+          "description": "Which tab to scrape for channel URLs ('videos', 'shorts' or 'both'). A /@handle/shorts URL always forces Shorts.",
           "enum": [
             "videos",
             "shorts",
             "both"
           ],
-          "default": "videos",
-          "description": "Which tab to scrape for channel URLs ('videos', 'shorts' or 'both'). A /@handle/shorts URL always forces Shorts."
+          "default": "videos"
         },
         "includeChannelInfo": {
           "title": "Include Channel Info",
           "type": "boolean",
-          "default": true,
-          "description": "For every channel URL, also deliver one 'channel' row with subscriber counts, About-panel info and links."
+          "description": "For every channel URL, also deliver one 'channel' row with subscriber counts, About-panel info and links.",
+          "default": true
         },
         "searchSortBy": {
           "title": "Search Sort By",
           "type": "string",
+          "description": "Sort order for search results.",
           "enum": [
             "relevance",
             "date",
             "views",
             "rating"
           ],
-          "default": "relevance",
-          "description": "Sort order for search results."
+          "default": "relevance"
         },
         "searchUploadDate": {
           "title": "Search Upload Date Filter",
           "type": "string",
+          "description": "Upload-date filter for search results.",
           "enum": [
             "any",
             "hour",
@@ -1073,86 +1101,85 @@
             "month",
             "year"
           ],
-          "default": "any",
-          "description": "Upload-date filter for search results."
+          "default": "any"
         },
         "searchIncludeShorts": {
           "title": "Include Shorts In Search",
           "type": "boolean",
-          "default": false,
-          "description": "Also extract Shorts rows from search result shelves."
+          "description": "Also extract Shorts rows from search result shelves.",
+          "default": false
         },
         "enrichVideoDetails": {
           "title": "Enrich Video Details",
           "type": "boolean",
-          "default": false,
-          "description": "Fetch the video page for every result for exact like counts, exact publish date, full description and comment count. One extra request per video."
+          "description": "Fetch the video page for every result for exact like counts, exact publish date, full description and comment count. One extra request per video.",
+          "default": false
         },
         "scrapeComments": {
           "title": "Scrape Comments",
           "type": "boolean",
-          "default": false,
-          "description": "Also scrape comments for each video (adds 'comment' rows to the dataset)."
+          "description": "Also scrape comments for each video (adds 'comment' rows to the dataset).",
+          "default": false
         },
         "maxCommentsPerVideo": {
           "title": "Max Comments Per Video",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 10000,
+          "description": "Maximum TOP-LEVEL comment rows per video. Replies are capped separately by Max Replies Per Comment and do not count toward this limit.",
           "default": 20,
-          "description": "Maximum TOP-LEVEL comment rows per video. Replies are capped separately by Max Replies Per Comment and do not count toward this limit."
+          "minimum": 1,
+          "maximum": 10000
         },
         "commentsSortBy": {
           "title": "Comments Sort By",
           "type": "string",
+          "description": "Comment order: 'top' (most upvoted) or 'newest'.",
           "enum": [
             "top",
             "newest"
           ],
-          "default": "top",
-          "description": "Comment order: 'top' (most upvoted) or 'newest'."
+          "default": "top"
         },
         "includeReplies": {
           "title": "Include Comment Replies",
           "type": "boolean",
-          "default": false,
-          "description": "Also scrape replies to comments."
+          "description": "Also scrape replies to comments.",
+          "default": false
         },
         "maxRepliesPerComment": {
           "title": "Max Replies Per Comment",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 1000,
+          "description": "Maximum reply rows per comment thread. Reply rows do not count toward Max Comments Per Video.",
           "default": 5,
-          "description": "Maximum reply rows per comment thread. Reply rows do not count toward Max Comments Per Video."
+          "minimum": 1,
+          "maximum": 1000
         },
         "maxTotalResults": {
           "title": "Max Total Results (All Inputs)",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 1000000,
+          "description": "Global cap on total rows across all inputs. Hard stop: no rows past this number.",
           "default": 1000,
-          "description": "Global cap on total rows across all inputs. Hard stop: no rows past this number."
+          "minimum": 1,
+          "maximum": 1000000
         },
         "maxConcurrency": {
           "title": "Max Concurrency",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 20,
+          "description": "How many inputs are processed in parallel. Pagination inside one input is sequential.",
           "default": 5,
-          "description": "How many inputs are processed in parallel. Pagination inside one input is sequential."
+          "minimum": 1,
+          "maximum": 20
         },
         "language": {
           "title": "Language",
           "type": "string",
-          "default": "en",
-          "description": "Interface language code (hl), e.g. 'en'."
+          "description": "Interface language code (hl), e.g. 'en'.",
+          "default": "en"
         },
         "country": {
           "title": "Country",
           "type": "string",
-          "default": "US",
-          "description": "Two-letter country code (gl), e.g. 'US'."
+          "description": "Two-letter country code (gl), e.g. 'US'.",
+          "default": "US"
         },
         "proxyConfiguration": {
           "title": "Proxy Configuration",
@@ -1181,10 +1208,10 @@
           "title": "Hashtag(s) to scrape from TikTok",
           "type": "array",
           "description": "Add TikTok hashtags to collect information about videos, views, likes, shares, comments, and creators. If not provided, the default hashtag is used.",
-          "prefill": [
+          "default": [
             "malaysianfood"
           ],
-          "default": [
+          "prefill": [
             "malaysianfood"
           ],
           "example": [
@@ -1196,10 +1223,10 @@
           "title": "Max posts per hashtag",
           "type": "integer",
           "description": "Maximum number of posts that will be scraped for each hashtag (1–500). Values outside this range are clamped.",
-          "minimum": 1,
-          "maximum": 500,
           "default": 20,
-          "prefill": 20
+          "prefill": 20,
+          "minimum": 1,
+          "maximum": 500
         },
         "dryRun": {
           "title": "Dry Run (Validation Mode)",
@@ -1224,8 +1251,8 @@
   {
     "tool": "eventbrite_events",
     "actor": "subimpact/eventbrite-scraper",
-    "title": "Eventbrite Scraper",
-    "description": "Scrape Eventbrite events with venue + organizer data by default. $0.002/event, usage paid by buyer. Search by city/query/category, URL mode, organizer mode, dryRun.",
+    "title": "Eventbrite Scraper: Events, Venues & Organizers",
+    "description": "Scrape Eventbrite events with venue and organizer data by default. Search by city, keyword, category, price and dates, or by event URL or organizer. $2.00 per 1,000 events. Accepts aitorsm/eventbrite input unchanged.",
     "pricing": [
       "Event: $0.002"
     ],
@@ -1344,8 +1371,8 @@
           "type": "integer",
           "description": "Search radius in km. REQUIRED when places is set. Default 50, max 50.",
           "default": 50,
-          "maximum": 50,
-          "minimum": 1
+          "minimum": 1,
+          "maximum": 50
         },
         "eventUrls": {
           "title": "Event URLs",
@@ -1362,9 +1389,9 @@
           "type": "integer",
           "description": "Maximum number of events to process (counts processed rows incl. duplicates). Default 1000 (above measured depth ~892 for London r50). Cap 10000.",
           "default": 1000,
-          "maximum": 10000,
+          "prefill": 10,
           "minimum": 1,
-          "prefill": 10
+          "maximum": 10000
         },
         "maxTotalChargeUsd": {
           "title": "Max total charge (USD)",
@@ -1383,8 +1410,8 @@
         },
         "enrichDestination": {
           "title": "Enrich destination fields",
-          "description": "Add ticket price range, sales status/window, saved flags, public collections and image renditions per event (one extra lightweight API call per event). On by default.",
           "type": "boolean",
+          "description": "Add ticket price range, sales status/window, saved flags, public collections and image renditions per event (one extra lightweight API call per event). On by default.",
           "default": true,
           "prefill": true
         },
@@ -1504,8 +1531,8 @@
           "title": "Publication",
           "type": "string",
           "description": "Substack slug (e.g. 'a16z') or custom domain (e.g. 'stratechery.com'). For custom domains, the substack slug is preferred when known.",
-          "prefill": "a16z",
-          "default": "a16z"
+          "default": "a16z",
+          "prefill": "a16z"
         },
         "mode": {
           "title": "Mode",
@@ -1552,6 +1579,7 @@
         "mode": {
           "title": "Scrape Mode",
           "type": "string",
+          "description": "What to scrape: search (posts by keyword/hashtag), author_feed (recent posts by a handle), thread (full thread with nested replies), profile (profile metadata), followers (follower graph), follows (following list).",
           "enum": [
             "search",
             "author_feed",
@@ -1560,15 +1588,14 @@
             "followers",
             "follows"
           ],
-          "description": "What to scrape: search (posts by keyword/hashtag), author_feed (recent posts by a handle), thread (full thread with nested replies), profile (profile metadata), followers (follower graph), follows (following list).",
           "default": "search"
         },
         "query": {
           "title": "Search Query",
           "type": "string",
           "description": "Keyword, hashtag, or query string (e.g. 'artificial intelligence', '#bluesky', 'startup'). Required in 'search' mode.",
-          "prefill": "artificial intelligence",
-          "default": "artificial intelligence"
+          "default": "artificial intelligence",
+          "prefill": "artificial intelligence"
         },
         "handle": {
           "title": "Handle or DID",
@@ -1584,26 +1611,26 @@
         "sort": {
           "title": "Search Sort Order",
           "type": "string",
+          "description": "Sort order for search mode: 'latest' (chronological) or 'top' (highest engagement).",
           "enum": [
             "latest",
             "top"
           ],
-          "default": "latest",
-          "description": "Sort order for search mode: 'latest' (chronological) or 'top' (highest engagement)."
+          "default": "latest"
         },
         "maxItems": {
           "title": "Max Results",
           "type": "integer",
-          "minimum": 1,
-          "maximum": 50000,
+          "description": "Maximum number of posts or profiles to scrape. Pay-per-event charges only for items successfully extracted.",
           "default": 100,
-          "description": "Maximum number of posts or profiles to scrape. Pay-per-event charges only for items successfully extracted."
+          "minimum": 1,
+          "maximum": 50000
         },
         "includeReplies": {
           "title": "Include Replies in Thread",
           "type": "boolean",
-          "default": true,
-          "description": "When in 'thread' mode, whether to recursively traverse and extract nested reply posts."
+          "description": "When in 'thread' mode, whether to recursively traverse and extract nested reply posts.",
+          "default": true
         },
         "proxyConfiguration": {
           "title": "Proxy Configuration",
@@ -1739,13 +1766,13 @@
           "title": "Proxy configuration",
           "type": "object",
           "description": "Apify Proxy settings. A residential proxy is required: Lazada blocks datacenter IPs, so the Actor fetches through a real browser session on a residential IP. The proxy country is matched to the selected Lazada market automatically unless you set apifyProxyCountry yourself.",
-          "prefill": {
+          "default": {
             "useApifyProxy": true,
             "apifyProxyGroups": [
               "RESIDENTIAL"
             ]
           },
-          "default": {
+          "prefill": {
             "useApifyProxy": true,
             "apifyProxyGroups": [
               "RESIDENTIAL"
@@ -1772,17 +1799,17 @@
           "title": "Start URLs",
           "type": "array",
           "description": "List of pages to extract JSON-LD from. Each entry: {\"url\": \"https://...\"}",
+          "default": [
+            {
+              "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
+            }
+          ],
           "prefill": [
             {
               "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
             },
             {
               "url": "https://www.bbc.com/news"
-            }
-          ],
-          "default": [
-            {
-              "url": "https://en.wikipedia.org/wiki/Artificial_intelligence"
             }
           ]
         },
@@ -1851,37 +1878,39 @@
     "input": {
       "properties": {
         "mode": {
+          "title": "Mode",
           "type": "string",
+          "description": "onpage = audit URLs; serp_preview = Google snippet preview with truncation flags",
           "enum": [
             "onpage",
             "serp_preview"
           ],
-          "default": "onpage",
-          "description": "onpage = audit URLs; serp_preview = Google snippet preview with truncation flags",
-          "title": "Mode"
+          "default": "onpage"
         },
         "pageUrls": {
+          "title": "Page URLs",
           "type": "array",
-          "items": {
-            "type": "string"
-          },
+          "description": "URLs to audit (onpage mode) or preview (serp_preview mode). Leave empty for a one-URL demo run.",
           "default": [
             "https://example.com"
           ],
           "prefill": [
             "https://example.com"
           ],
-          "description": "URLs to audit (onpage mode) or preview (serp_preview mode). Leave empty for a one-URL demo run.",
-          "title": "Page URLs"
+          "items": {
+            "type": "string"
+          }
         },
         "maxUrls": {
+          "title": "Max URLs (optional)",
           "type": "integer",
-          "minimum": 1,
           "description": "Optional cap on how many URLs are processed per run. Leave empty for no limit.",
-          "title": "Max URLs (optional)"
+          "minimum": 1
         },
         "serpOverrides": {
+          "title": "SERP overrides",
           "type": "array",
+          "description": "Optional title/description overrides per URL for serp_preview mode (used instead of the live page)",
           "items": {
             "type": "object",
             "properties": {
@@ -1901,34 +1930,32 @@
                 "description": "Custom description"
               }
             }
-          },
-          "description": "Optional title/description overrides per URL for serp_preview mode (used instead of the live page)",
-          "title": "SERP overrides"
+          }
         },
         "useLivePage": {
+          "title": "Use live page",
           "type": "boolean",
-          "default": true,
           "description": "serp_preview: pull title/description from the live page before applying overrides",
-          "title": "Use live page"
+          "default": true
         },
         "includeLinks": {
+          "title": "Include link list",
           "type": "boolean",
-          "default": true,
           "description": "onpage: include the full link list + image lists in the audit record",
-          "title": "Include link list"
+          "default": true
         },
         "fetchTimeoutSec": {
+          "title": "Fetch timeout (s)",
           "type": "integer",
-          "minimum": 5,
-          "maximum": 120,
-          "default": 30,
           "description": "Per-page fetch timeout in seconds",
-          "title": "Fetch timeout (s)"
+          "default": 30,
+          "minimum": 5,
+          "maximum": 120
         },
         "proxyUrl": {
+          "title": "Proxy URL",
           "type": "string",
-          "description": "Optional HTTP(S) proxy for page fetches",
-          "title": "Proxy URL"
+          "description": "Optional HTTP(S) proxy for page fetches"
         }
       },
       "required": []
@@ -2047,6 +2074,390 @@
       "required": [
         "mode"
       ]
+    }
+  },
+  {
+    "tool": "rss_feed_reader",
+    "actor": "subimpact/rss-feed-reader",
+    "title": "RSS Feed Reader: RSS, Atom & JSON Feed to JSON",
+    "description": "Read RSS, RDF, Atom and JSON Feed URLs and get one clean JSON row per item: title, link, ISO dates, author, summary, categories, image, enclosures. Only-new mode for scheduled runs, feed discovery and archive history for 350+ news feeds. $0.50 per 1,000 items.",
+    "pricing": [
+      "Feed item: $0.0005"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "feedUrls": {
+          "title": "🔗 Feed URLs",
+          "type": "array",
+          "description": "RSS, Atom or JSON Feed URLs. A normal web page also works: the actor follows the feed it advertises (link rel=alternate). Leave empty to read the BBC News feed, so you can try the actor in one click.",
+          "prefill": [
+            "https://feeds.bbci.co.uk/news/rss.xml",
+            "https://hnrss.org/frontpage"
+          ],
+          "example": [
+            "https://feeds.bbci.co.uk/news/rss.xml",
+            "https://hnrss.org/frontpage",
+            "https://www.jsonfeed.org/feed.json"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxItemsPerFeed": {
+          "title": "📄 Max items per feed",
+          "type": "integer",
+          "description": "Newest items kept per feed, after the date and keyword filters (1-1000). A feed's items are always returned newest first.",
+          "default": 50,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxTotalItems": {
+          "title": "🛑 Max items per run (all feeds)",
+          "type": "integer",
+          "description": "Global cap for the whole run (1-100000). Once it is reached no more rows are pushed. You pay per delivered item, so the default run stays under $0.05.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "publishedAfter": {
+          "title": "📅 Published after (optional)",
+          "type": "string",
+          "description": "Keep items published on or after this date. ISO date (2026-10-01) or datetime (2026-10-01T09:00:00Z). Items with no date are dropped while a date filter is set."
+        },
+        "publishedBefore": {
+          "title": "📅 Published before (optional)",
+          "type": "string",
+          "description": "Keep items published on or before this date (a bare date covers the whole day). ISO date or datetime."
+        },
+        "keywords": {
+          "title": "🔎 Keywords (optional)",
+          "type": "array",
+          "description": "Keep only items whose title or summary contains ANY of these words, case-insensitive. Leave empty for every item.",
+          "default": [],
+          "example": [
+            "election",
+            "budget"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "includeContent": {
+          "title": "📝 Include full content HTML",
+          "type": "boolean",
+          "description": "On: every row also carries contentHtml (content:encoded / Atom content / content_html), truncated to 20,000 characters. Off (default): only the plain-text summary (max 1,000 characters) is returned.",
+          "default": false
+        },
+        "onlyNew": {
+          "title": "🆕 Only new items since the last run",
+          "type": "boolean",
+          "description": "For scheduled runs: remembers, per feed, which items were already delivered. A named key-value store in your account keeps the item keys, and it is written only after a feed's rows are pushed. The first run delivers everything and remembers it.",
+          "default": false
+        },
+        "stateStoreName": {
+          "title": "🗂️ Only-new state store name",
+          "type": "string",
+          "description": "Named key-value store that holds the only-new state (letters, numbers and dashes, 1-63 characters). Use a different name per task if you want independent tracking. Not used when onlyNew is off.",
+          "default": "rss-feed-reader-state"
+        },
+        "includeArchive": {
+          "title": "🗄️ Include archive history from our news index",
+          "type": "boolean",
+          "description": "On: also return older items the live feed no longer carries, for feeds covered by our news index (350+ news publisher feeds). Archive rows have fromArchive = true. If the archive is unavailable the run still returns live items and adds a note about it.",
+          "default": false
+        },
+        "maxConcurrency": {
+          "title": "⚡ Feeds fetched in parallel",
+          "type": "integer",
+          "description": "How many feeds are read at the same time (1-20). Lower it for slow or rate-limited servers.",
+          "default": 5,
+          "prefill": 5,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "proxyConfiguration": {
+          "title": "🌐 Proxy configuration",
+          "type": "object",
+          "description": "No proxy by default, which is what most feeds need. Enable Apify Proxy only if a feed blocks your server IP.",
+          "default": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "telegram_channel",
+    "actor": "subimpact/telegram-channel-scraper",
+    "title": "Telegram Channel Scraper: Public Posts, Views & Media",
+    "description": "Scrape public Telegram channels via the t.me web preview: one row per post with text, date, views, media, link previews, polls, reactions, hashtags and links, plus channel info. No login, no API key, no browser. $0.30 per 1,000 posts.",
+    "pricing": [
+      "Post: $0.0003",
+      "Channel info: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "channels": {
+          "title": "Channels",
+          "type": "array",
+          "description": "Public channels to read. Any of these forms works: durov, @durov, t.me/durov, t.me/s/durov, https://t.me/durov, or a single post URL such as https://t.me/durov/531 (that post only). Private groups, invite links (t.me/+hash) and channels with the web preview disabled are not readable and are reported in the run summary.",
+          "prefill": [
+            "durov",
+            "telegram"
+          ],
+          "example": [
+            "durov",
+            "@telegram",
+            "https://t.me/s/durov",
+            "https://t.me/durov/531"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "maxPostsPerChannel": {
+          "title": "Max posts per channel",
+          "type": "integer",
+          "description": "How many posts to collect from each channel, newest first (1 to 10000). Telegram serves 20 posts per page, so this also decides how many pages are fetched.",
+          "default": 50,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "maxTotalPosts": {
+          "title": "Max posts per run (all channels)",
+          "type": "integer",
+          "description": "Hard cap on post rows across all channels in one run (1 to 1000000). The run stops cleanly when it is reached.",
+          "default": 500,
+          "prefill": 500,
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "searchQuery": {
+          "title": "Search inside the channel (optional)",
+          "type": "string",
+          "description": "Only posts matching this text, using Telegram's own in-channel search (t.me/s/<channel>?q=...). Works with paging and with every other option. Leave empty to read the channel timeline.",
+          "example": "Telegram"
+        },
+        "postedAfter": {
+          "title": "Only posts after this date (optional)",
+          "type": "string",
+          "description": "ISO date or date-time. Posts older than this are skipped, and paging stops as soon as a page reaches older posts. Example: 2026-08-01 or 2026-08-01T09:00:00Z.",
+          "example": "2026-08-01"
+        },
+        "postedBefore": {
+          "title": "Only posts before this date (optional)",
+          "type": "string",
+          "description": "ISO date or date-time. Newer posts are skipped (paging still starts from the newest page). Example: 2026-10-01.",
+          "example": "2026-10-01"
+        },
+        "includeChannelInfo": {
+          "title": "Include one channel-info row per channel",
+          "type": "boolean",
+          "description": "Push a channel row (title, description, subscriber count, media counters, avatar, verified flag) before that channel's posts. Costs one channel-info event per channel.",
+          "default": true,
+          "prefill": true
+        },
+        "onlyNew": {
+          "title": "Only new posts (delta mode)",
+          "type": "boolean",
+          "description": "Deliver only posts newer than the highest post id already delivered for that channel. The cursor is kept in the named key-value store below, so scheduled runs return just the new posts.",
+          "default": false,
+          "prefill": false
+        },
+        "stateStoreName": {
+          "title": "State store name (delta mode)",
+          "type": "string",
+          "description": "Name of the key-value store in your Apify account that keeps the per-channel post-id cursors. Leave the default unless you run several configurations of this actor and want separate cursors.",
+          "default": "telegram-channel-scraper-state",
+          "prefill": "telegram-channel-scraper-state"
+        },
+        "maxConcurrency": {
+          "title": "Channels in parallel",
+          "type": "integer",
+          "description": "How many channels are fetched at the same time (1 to 10). Pages inside a channel are always fetched one after another with a short delay.",
+          "default": 3,
+          "prefill": 3,
+          "minimum": 1,
+          "maximum": 10
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Direct requests are the default: t.me answered 10 of 10 parallel direct requests when this actor was built. Enable Apify proxy only if your runs are rate limited. A proxy failure fails the request; it never falls back to a direct request.",
+          "default": {
+            "useApifyProxy": false
+          },
+          "prefill": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "google_flights",
+    "actor": "subimpact/google-flights-scraper",
+    "title": "Google Flights Scraper: Fares, Airlines & Times",
+    "description": "Search Google Flights and get one row per flight option: fare, airlines, flight numbers, times, airports, stops, layovers, aircraft, legroom and CO2. One-way or round trip, economy/business/first, 1-9 adults, any currency. $2.00 per 1,000 searches.",
+    "pricing": [
+      "Flight search: $0.002"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "searches": {
+          "title": "✈️ Searches",
+          "type": "array",
+          "description": "One object per search. from/to accept a 3-letter airport or city code (KUL, SIN) or a free-text city name (Kuala Lumpur). date and returnDate are YYYY-MM-DD; returnDate null or empty means one way. adults 1-9, cabin economy, business or first. When this list is empty the shortcut fields below are used instead. Leave \"date\" out to search about 30 days from today.",
+          "prefill": [
+            {
+              "from": "KUL",
+              "to": "SIN",
+              "adults": 1,
+              "cabin": "economy"
+            }
+          ],
+          "example": [
+            {
+              "from": "KUL",
+              "to": "SIN",
+              "date": "2026-11-24",
+              "returnDate": null,
+              "adults": 1,
+              "cabin": "economy"
+            },
+            {
+              "from": "SIN",
+              "to": "HND",
+              "date": "2026-12-01",
+              "returnDate": "2026-12-08",
+              "adults": 2,
+              "cabin": "business"
+            }
+          ],
+          "items": {
+            "type": "object"
+          }
+        },
+        "from": {
+          "title": "🛫 From (shortcut)",
+          "type": "string",
+          "description": "Used only when Searches is empty. Departure airport or city: a 3-letter code such as KUL or a city name such as Kuala Lumpur.",
+          "prefill": "KUL"
+        },
+        "to": {
+          "title": "🛬 To (shortcut)",
+          "type": "string",
+          "description": "Used only when Searches is empty. Arrival airport or city: a 3-letter code such as SIN or a city name such as Singapore.",
+          "prefill": "SIN"
+        },
+        "departureDate": {
+          "title": "📅 Departure date (shortcut)",
+          "type": "string",
+          "description": "Used only when Searches is empty. YYYY-MM-DD, today or later, up to 330 days ahead. Empty means about 30 days from today."
+        },
+        "returnDate": {
+          "title": "📅 Return date (shortcut)",
+          "type": "string",
+          "description": "Used only when Searches is empty. YYYY-MM-DD, on or after the departure date. Leave empty for a one-way search."
+        },
+        "adults": {
+          "title": "👥 Adults",
+          "type": "integer",
+          "description": "Number of adult passengers (1-9). Fares are the total for all adults, exactly as Google Flights shows them.",
+          "default": 1,
+          "minimum": 1,
+          "maximum": 9
+        },
+        "cabin": {
+          "title": "💺 Cabin",
+          "type": "string",
+          "description": "Cabin class. Every option was verified against live Google Flights pages in October 2026.",
+          "enum": [
+            "economy",
+            "business",
+            "first"
+          ],
+          "enumTitles": [
+            "Economy",
+            "Business",
+            "First"
+          ],
+          "default": "economy"
+        },
+        "currency": {
+          "title": "💱 Currency",
+          "type": "string",
+          "description": "3-letter currency code for the prices, e.g. USD, EUR, MYR, SGD, JPY. Google converts the fare, so the numbers are Google's conversion, not an interbank rate.",
+          "default": "USD",
+          "prefill": "USD"
+        },
+        "language": {
+          "title": "🗣️ Interface language (hl)",
+          "type": "string",
+          "description": "2-letter Google interface language, e.g. en, ms, de. Prices, airline names and dates follow this language.",
+          "default": "en",
+          "prefill": "en"
+        },
+        "country": {
+          "title": "🌍 Country (gl)",
+          "type": "string",
+          "description": "2-letter Google country code, e.g. us, my, sg, gb. It sets the Google Flights market (which points of sale and fare rules are shown); the currency comes from the Currency field.",
+          "default": "us",
+          "prefill": "us"
+        },
+        "nonstopOnly": {
+          "title": "🚀 Nonstop only",
+          "type": "boolean",
+          "description": "Only show nonstop flights. Verified: Google returns just the nonstop options and the search shows the nonstop filter as applied.",
+          "default": false
+        },
+        "maxFlightsPerSearch": {
+          "title": "💯 Max flight options per search",
+          "type": "integer",
+          "description": "Upper limit of flight rows taken from each search's results page (1-300). A page usually lists 20-60 options that Google has already rendered; extra options are dropped, cheapest-first, and the drop is reported.",
+          "default": 50,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 300
+        },
+        "maxSearches": {
+          "title": "🧮 Max searches per run",
+          "type": "integer",
+          "description": "Cost ceiling: at most this many searches are run (1-200). Every successful search costs $0.002, so the default 25 caps a run at $0.05. Searches above the cap are skipped and listed in RUN_SUMMARY.",
+          "default": 25,
+          "prefill": 25,
+          "minimum": 1,
+          "maximum": 200
+        },
+        "maxConcurrency": {
+          "title": "⚙️ Parallel searches",
+          "type": "integer",
+          "description": "How many searches run at the same time (1-10). Higher is faster and more likely to get a soft rate limit from Google.",
+          "default": 3,
+          "prefill": 3,
+          "minimum": 1,
+          "maximum": 10
+        },
+        "proxyConfiguration": {
+          "title": "🔌 Proxy configuration",
+          "type": "object",
+          "description": "Google Flights answers direct requests from Apify's datacenter IPs, so no proxy is used by default and the run costs nothing extra. Enable Apify Proxy (or your own proxy URLs) if you run very large jobs or see empty pages; a failed proxy setup then fails the search instead of quietly going direct.",
+          "default": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": []
     }
   }
 ]

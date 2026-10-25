@@ -103,12 +103,12 @@ async function connect(args: string[] = []): Promise<Client> {
 }
 
 describe("stdio round trip", () => {
-  test("lists 20 tools and calls google_search against a mocked Apify API", async () => {
+  test("lists 23 tools and calls google_search against a mocked Apify API", async () => {
     expect(existsSync("dist/index.js")).toBe(true);
     const client = await connect();
     try {
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(20);
+      expect(tools).toHaveLength(23);
 
       const result = await client.callTool({
         name: "google_search",
