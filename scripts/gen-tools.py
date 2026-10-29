@@ -22,6 +22,7 @@ NEW_TOOLS = {
     "rss_feed_reader": "subimpact/rss-feed-reader",
     "telegram_channel": "subimpact/telegram-channel-scraper",
     "google_flights": "subimpact/google-flights-scraper",
+    "my_grocery_prices": "subimpact/my-grocery-prices",
 }
 
 PROP_KEYS = ["title", "type", "description", "enum", "enumTitles", "default", "prefill",

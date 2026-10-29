@@ -24,15 +24,15 @@ afterEach(() => {
 });
 
 describe("tools/list without credentials", () => {
-  test("exposes 22 actor tools plus get_run_results and a valid JSON Schema for each", async () => {
+  test("exposes 23 actor tools plus get_run_results and a valid JSON Schema for each", async () => {
     vi.stubEnv("APIFY_TOKEN", "");
     const { client, close } = await connectTestClient();
     try {
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(23);
+      expect(tools).toHaveLength(24);
       expect(tools.map((tool) => tool.name)).toContain("get_run_results");
       expect(tools.map((tool) => tool.name)).toContain("google_search");
-      expect(tools.filter((tool) => tool.name !== "get_run_results")).toHaveLength(22);
+      expect(tools.filter((tool) => tool.name !== "get_run_results")).toHaveLength(23);
 
       const ajv = new Ajv({ strict: false, validateFormats: false });
       for (const tool of tools) {

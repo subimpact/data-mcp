@@ -47,7 +47,7 @@ describe("tool subsets", () => {
     const specs = loadActorSpecs();
     const selected = selectActorSpecs(specs, ["pinterest", "google_search"]);
     expect(selected.map((spec) => spec.tool)).toEqual(["google_search", "pinterest"]);
-    expect(selectActorSpecs(specs, undefined)).toHaveLength(22);
+    expect(selectActorSpecs(specs, undefined)).toHaveLength(23);
   });
 
   test("an unknown-only filter fails with the list of valid names", () => {

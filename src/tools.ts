@@ -27,7 +27,7 @@ export interface ToolDefinition {
   name: string;
   description: string;
   inputSchema: JsonSchema;
-  /** Present for the 22 actor-backed tools, absent for get_run_results. */
+  /** Present for the 23 actor-backed tools, absent for get_run_results. */
   spec?: ActorSpec;
 }
 

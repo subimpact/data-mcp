@@ -3,7 +3,7 @@
     "tool": "google_search",
     "actor": "subimpact/google-serp-ai-overviews",
     "title": "Google SERP + AI Overviews API",
-    "description": "Google search as JSON: full AI Overview answers (lists, citations, sources) plus organic results, People Also Ask, knowledge graph, top stories and local results in one row per query. Batch up to 1,000 queries. From $1.80 per 1,000, platform costs included.",
+    "description": "Google search as JSON: full AI Overview answers (lists, citations, sources) plus organic results, People Also Ask, knowledge graph, top stories and local results in one row per query. Works in 99 languages, up to 1,000 queries per run. From $1.80 per 1,000, platform costs included.",
     "pricing": [
       "Google SERP: $0.003"
     ],
@@ -27,7 +27,7 @@
         "hl": {
           "title": "Language (hl)",
           "type": "string",
-          "description": "Two-letter language code, e.g. en, ms, zh.",
+          "description": "Google interface language code (hl), e.g. en, it, de, fr, ja, pt-BR, zh-CN, zh-TW, es-419. Regional variants use a hyphen (pt-BR, es-419); a bare two-letter or three-letter code (en, fil, haw) is fine when Google offers no regional variant.",
           "default": "en"
         },
         "maxResults": {
@@ -71,7 +71,7 @@
         "concurrency": {
           "title": "Concurrency",
           "type": "integer",
-          "description": "Number of parallel queries (1-30, default 10). A/B measured: 20 queries at c5=34s, c10=35s, c20=65s — the SERP proxy pool is the bottleneck, so beyond ~10 workers latency balloons. 10 gives the same throughput as 5 with headroom for AI-Overview-heavy sets.",
+          "description": "Number of parallel queries (1-30, default 10). A/B measured: 20 queries at c5=34s, c10=35s, c20=65s — the SERP proxy pool is the bottleneck, so beyond ~10 workers latency balloons. 10 gives the same throughput as 5 with headroom for AI-Overview-heavy sets. Capped at about 1 parallel query per 100 MB of run memory (10 at the default 1024 MB, 20 at 2048 MB, 30 from 3072 MB).",
           "default": 10,
           "minimum": 1,
           "maximum": 30
@@ -429,7 +429,8 @@
     "pricing": [
       "Place scraped: $0.001",
       "Review scraped: $0.0005",
-      "Actor start: $5e-05"
+      "Actor start: $5e-05",
+      "Add-on: Company contacts: $0.001"
     ],
     "usage_paid_by_user": true,
     "input": {
@@ -498,6 +499,20 @@
           "prefill": 0,
           "minimum": 0,
           "maximum": 99999
+        },
+        "scrapeContacts": {
+          "title": "Add-on: Company contacts from website ($)",
+          "type": "boolean",
+          "description": "Crawl each place's website for emails, phone numbers and social profiles. $0.001 per place ($1.00 per 1,000), charged only when at least one email, website phone or social link is found. Contact data can be personal data: you need a lawful basis to process it (GDPR / PDPA), and the same rules apply to any data you store or share.",
+          "default": false
+        },
+        "maxContactPagesPerPlace": {
+          "title": "Contact pages per place",
+          "type": "integer",
+          "description": "Pages to scan on each place website when the contacts add-on is on: the homepage plus up to this many minus one best-scored contact or about page.",
+          "default": 3,
+          "minimum": 1,
+          "maximum": 10
         },
         "scrapePlaceDetailPage": {
           "title": "Scrape place detail page",
@@ -2455,6 +2470,158 @@
           "default": {
             "useApifyProxy": false
           }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "my_grocery_prices",
+    "actor": "subimpact/my-grocery-prices",
+    "title": "Malaysia Grocery Prices & Promo Tracker",
+    "description": "One normalised Malaysian grocery price feed from 99 Bulksales, Jaya Grocer and KPDN PriceCatcher, with pack-size parsing, RM per kg / litre / piece unit prices and run-to-run change tracking.",
+    "pricing": [
+      "Product price row: $0.001"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "sources": {
+          "title": "Sources",
+          "type": "array",
+          "description": "Retailer and open-data sources to collect. 99 Bulksales is a wholesale catalogue (sitemap discovery, product pages), Jaya Grocer is a Shopify storefront (/products.json), PriceCatcher is the KPDN open dataset on data.gov.my.",
+          "default": [
+            "99bulksales",
+            "jayagrocer",
+            "pricecatcher"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "99bulksales",
+              "jayagrocer",
+              "pricecatcher"
+            ],
+            "enumTitles": [
+              "99 Bulksales (99 Speedmart wholesale)",
+              "Jaya Grocer",
+              "KPDN PriceCatcher (open data)"
+            ]
+          }
+        },
+        "searchTerms": {
+          "title": "Search terms",
+          "type": "array",
+          "description": "Optional. Every word of a term must appear in the product name or slug (case-insensitive). Leave empty to collect the catalogue in source order. The prefill [\"maggi\"] is a small example run.",
+          "prefill": [
+            "maggi"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxItemsPerSource": {
+          "title": "Max rows per source",
+          "type": "integer",
+          "description": "Cap on delivered rows for each source. 99 Bulksales and PriceCatcher stop fetching once the cap is reached; Jaya Grocer stops paging. Default 15 per source = up to 45 rows.",
+          "default": 15,
+          "minimum": 1,
+          "maximum": 20000
+        },
+        "jayaProductTypes": {
+          "title": "Jaya Grocer product types",
+          "type": "array",
+          "description": "Optional. Keep only Jaya Grocer products whose product_type equals one of these values (case-insensitive), e.g. Beverages, Frozen.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pcRetailers": {
+          "title": "PriceCatcher retailers",
+          "type": "array",
+          "description": "Premise-name patterns used to keep PriceCatcher outlets. Food courts and restaurants are always excluded.",
+          "default": [
+            "lotuss",
+            "aeon",
+            "mydin",
+            "econsave",
+            "99speedmart"
+          ],
+          "items": {
+            "type": "string",
+            "enum": [
+              "lotuss",
+              "aeon",
+              "mydin",
+              "econsave",
+              "99speedmart",
+              "giant",
+              "tfvalue",
+              "nsk",
+              "jayagrocer",
+              "villagegrocer"
+            ],
+            "enumTitles": [
+              "Lotus's",
+              "AEON / AEON BIG",
+              "Mydin",
+              "Econsave",
+              "99 Speedmart",
+              "Giant",
+              "TF Value-Mart",
+              "NSK",
+              "Jaya Grocer",
+              "Village Grocer"
+            ]
+          }
+        },
+        "pcStates": {
+          "title": "PriceCatcher states",
+          "type": "array",
+          "description": "Optional. Keep only outlets in these states, matched case-insensitively (e.g. Selangor, Johor, W.P. Kuala Lumpur).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pcItemCategories": {
+          "title": "PriceCatcher item categories",
+          "type": "array",
+          "description": "Optional. Keep only these PriceCatcher item categories, matched case-insensitively (e.g. AYAM, BERAS, MINYAK DAN LEMAK).",
+          "items": {
+            "type": "string"
+          }
+        },
+        "pcLookbackDays": {
+          "title": "PriceCatcher lookback (days)",
+          "type": "integer",
+          "description": "Window ending at the newest date in the data. The latest observation per outlet and item inside the window is returned.",
+          "default": 7,
+          "minimum": 1,
+          "maximum": 31
+        },
+        "pcIncludeCookedFood": {
+          "title": "Include cooked food",
+          "type": "boolean",
+          "description": "PriceCatcher also prices cooked dishes (item group MAKANAN SIAP MASAK). Off by default so the feed stays comparable grocery items.",
+          "default": false
+        },
+        "trackChanges": {
+          "title": "Track changes between runs",
+          "type": "boolean",
+          "description": "Compare each row with the last run stored under stateKey and add changeType (new, price_down, price_up, promo_start, promo_end, unchanged), previousPriceRm and previousIsPromo.",
+          "default": false
+        },
+        "stateKey": {
+          "title": "State key",
+          "type": "string",
+          "description": "Separate change-tracking history per key, e.g. one per product list or region. Sanitised to A-Z, a-z, 0-9, _ and - (max 50 characters).",
+          "default": "default"
+        },
+        "onlyChanges": {
+          "title": "Only push changes",
+          "type": "boolean",
+          "description": "When trackChanges is on, deliver and charge only rows whose changeType is not unchanged. Requires trackChanges.",
+          "default": false
         }
       },
       "required": []
