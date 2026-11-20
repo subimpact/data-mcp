@@ -52,6 +52,8 @@ Want a smaller tool list? Add `"--tools", "google_search,news_mentions"` to `arg
 
 ## Tools
 
+Docs, sample output, code snippets and dated price comparisons for every tool: [subimpact.net/apis](https://subimpact.net/apis/).
+
 <!-- tools:start -->
 
 | Tool | What it does | Price |
