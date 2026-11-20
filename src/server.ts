@@ -32,7 +32,7 @@ export const SERVER_NAME = "subimpact-data";
 export const TOKEN_MISSING_MESSAGE =
   "Set APIFY_TOKEN to your Apify API token (https://console.apify.com/settings/integrations). Runs are billed to your Apify account.";
 
-export const INSTRUCTIONS = `Subimpact Data MCP exposes 23 data tools, one per subimpact actor on the Apify Store: Google SERP + AI Overviews, Google AI Mode, news mentions, Google Maps places, Google Jobs, website contacts, Google Trends, page-to-markdown, Google Ads Transparency, YouTube, TikTok hashtags, Eventbrite, ATS/career jobs, Substack, Bluesky, Lazada products, JSON-LD entities, SEO page audits, Pinterest, RSS/Atom feed reading, Telegram public channels, Google Flights and Malaysian grocery prices.
+export const INSTRUCTIONS = `Subimpact Data MCP exposes 38 data tools, one per subimpact actor on the Apify Store: Google SERP + AI Overviews, Google AI Mode, news mentions, Google Maps places, Google Jobs, website contacts, Google Trends, page-to-markdown, Google Ads Transparency, YouTube, TikTok hashtags, Eventbrite, ATS/career jobs, Substack, Bluesky, Lazada products, JSON-LD entities, SEO page audits, Pinterest, RSS/Atom feed reading, Telegram public channels, Google Flights, Malaysian grocery prices, Google Images, Google Shopping, Google News RSS, keyword autocomplete suggestions, App Store and Google Play reviews, Facebook pages, TikTok profiles, Threads, Tumblr, AliExpress products, LinkedIn jobs, SEEK/JobStreet jobs, domain WHOIS/DNS, sitemap URLs and PDF text.
 
 How it works: each tool call starts one Actor run on Apify with YOUR own APIFY_TOKEN and returns that run's dataset items as JSON. Nothing is scraped locally and the server holds no credentials of its own.
 

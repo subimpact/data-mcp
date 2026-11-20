@@ -7,7 +7,7 @@
     "pricing": [
       "Google SERP: $0.003"
     ],
-    "usage_paid_by_user": null,
+    "usage_paid_by_user": true,
     "input": {
       "properties": {
         "queries": {
@@ -16,7 +16,8 @@
           "description": "List of search queries to run. Max 1000 per run.",
           "prefill": [
             "best crm for startups"
-          ]
+          ],
+          "minItems": 1
         },
         "gl": {
           "title": "Country (gl)",
@@ -146,7 +147,7 @@
     "pricing": [
       "AI Mode search completed: $0.003"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "queries": {
@@ -181,6 +182,12 @@
           "title": "Skip cache (always fetch fresh)",
           "type": "boolean",
           "description": "By default, a question that was answered for the same country, language and location in the last hour may be served from our cache (marked cached: true, with cached_at). Turn this on to always fetch a fresh answer from Google, for example when tracking how answers change. Fresh answers take longer under heavy load.",
+          "default": false
+        },
+        "failOnNoCapacity": {
+          "title": "Fail the run when our browsers are briefly out of capacity",
+          "type": "boolean",
+          "description": "Off by default: when our browser pool briefly runs out of eligible identities, the run waits up to 3 minutes when capacity is about to return, otherwise every query comes back as a free Blocked row with a retry hint (search_metadata.capacity_blocked: true, retry_after_s) and the run still SUCCEEDS. Turn this on only for pipelines that prefer a FAILED run to trigger an automatic retry: the run then fails immediately instead of returning Blocked rows. Nothing is ever charged either way.",
           "default": false
         },
         "backend": {
@@ -453,6 +460,11 @@
           "type": "string",
           "description": "Optional. Center longitude of the search viewport. Only used together with latitude; empty = resolve from the search string."
         },
+        "locationQuery": {
+          "title": "Location",
+          "type": "string",
+          "description": "Location to search in, e.g. 'Austin, Texas, USA'. Used when latitude/longitude are empty."
+        },
         "zoom": {
           "title": "Zoom level (1-21)",
           "type": "string",
@@ -528,7 +540,7 @@
         "startUrls": {
           "title": "Google Maps URLs",
           "type": "array",
-          "description": "Direct place detail scrape by maps.google.com place URL.",
+          "description": "Direct place detail scrape by maps.google.com place URL. Compass-style objects ({\"url\": \"...\"}) work too, and a /maps/search/<query>/@lat,lng,<zoom>z URL runs that query as a search at that viewport.",
           "prefill": []
         },
         "proxyConfiguration": {
@@ -621,7 +633,7 @@
     "pricing": [
       "Page scanned: $0.0008"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "startUrls": {
@@ -926,7 +938,7 @@
       "Ad: $0.0008",
       "Advertiser: $0.0005"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "searchTerms": {
@@ -1010,7 +1022,7 @@
     "pricing": [
       "Result: $0.001"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "searchQueries": {
@@ -1024,7 +1036,7 @@
         "startUrls": {
           "title": "Start URLs",
           "type": "array",
-          "description": "YouTube URLs: videos (/watch?v=, youtu.be), Shorts (/shorts/), channels (@handle, /channel/, /c/, /user/) or playlists (?list=).",
+          "description": "YouTube URLs: videos (/watch?v=, youtu.be), Shorts (/shorts/), channels (@handle, /channel/, /c/, /user/), playlists (?list=), search result pages (/results?search_query=) or hashtags (/hashtag/).",
           "prefill": [
             {
               "method": "GET",
@@ -1187,13 +1199,13 @@
         "language": {
           "title": "Language",
           "type": "string",
-          "description": "Interface language code (hl), e.g. 'en'.",
+          "description": "Language code such as en, ms, pt-BR (sent as the interface language hl).",
           "default": "en"
         },
         "country": {
           "title": "Country",
           "type": "string",
-          "description": "Two-letter country code (gl), e.g. 'US'.",
+          "description": "Two-letter country code such as US, MY, GB (sent as the content region gl).",
           "default": "US"
         },
         "proxyConfiguration": {
@@ -1271,7 +1283,7 @@
     "pricing": [
       "Event: $0.002"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "query": {
@@ -1433,7 +1445,7 @@
         "dryRun": {
           "title": "Dry run",
           "type": "boolean",
-          "description": "Count only, no charge. Still bills platform usage.",
+          "description": "Count only, no charge.",
           "default": false
         },
         "keyword": {
@@ -1471,7 +1483,7 @@
       "Job scraped: $0.001",
       "Company monitored: $0.02"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "companies": {
@@ -1539,7 +1551,7 @@
       "Run started: $5e-05",
       "Post or publication row: $0.001"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "publication": {
@@ -1588,7 +1600,7 @@
       "Post scraped: $0.001",
       "Profile scraped: $0.002"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "mode": {
@@ -1985,7 +1997,7 @@
       "Pin scraped: $0.00199",
       "Media downloaded: $0.005"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "mode": {
@@ -2099,7 +2111,7 @@
     "pricing": [
       "Feed item: $0.0005"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "feedUrls": {
@@ -2214,7 +2226,7 @@
       "Post: $0.0003",
       "Channel info: $0.001"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "channels": {
@@ -2326,7 +2338,7 @@
     "pricing": [
       "Flight search: $0.002"
     ],
-    "usage_paid_by_user": true,
+    "usage_paid_by_user": null,
     "input": {
       "properties": {
         "searches": {
@@ -2622,6 +2634,1544 @@
           "type": "boolean",
           "description": "When trackChanges is on, deliver and charge only rows whose changeType is not unchanged. Requires trackChanges.",
           "default": false
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "google_images",
+    "actor": "subimpact/google-images-scraper",
+    "title": "Google Images Scraper",
+    "description": "Google Images search results as JSON: original image URL, thumbnail, exact pixel dimensions, title, source page and domain for every image. No browser, no API key. From $1.50 per 1,000 images.",
+    "pricing": [
+      "Image scraped: $0.0015"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "queries": {
+          "title": "Search queries",
+          "type": "array",
+          "description": "One or more Google Images searches, e.g. `red panda` or `mid century modern sofa`. Each query returns up to `maxImagesPerQuery` images. Maximum 50 queries per run.",
+          "prefill": [
+            "red panda"
+          ],
+          "minItems": 1,
+          "maxItems": 50
+        },
+        "gl": {
+          "title": "Country (gl)",
+          "type": "string",
+          "description": "Two-letter Google country setting, which decides the result set and the regional mix of sites: us, gb, my, sg, de, au, in. `uk` is accepted and mapped to gb.",
+          "default": "us",
+          "prefill": "us"
+        },
+        "hl": {
+          "title": "Language (hl)",
+          "type": "string",
+          "description": "Google interface language: en, de, fr, ja, pt-BR, zh-CN, es-419. This is the language of the Google UI and of the titles Google returns.",
+          "default": "en",
+          "prefill": "en"
+        },
+        "maxImagesPerQuery": {
+          "title": "Max images per query",
+          "type": "integer",
+          "description": "How many images to return per query (1-500, default 50). Google serves about 100 images per page, so 50 costs one page per query. Google rarely serves more than a few hundred images for a query; the actor stops as soon as a page comes back empty.",
+          "default": 50,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 500
+        },
+        "maxItems": {
+          "title": "Max images per run (all queries)",
+          "type": "integer",
+          "description": "Global cost ceiling: the run stops after this many image rows across all queries (default 200, max 5000). At $0.0015 per image, 200 images cost $0.30 plus proxy usage. The default single query returns 50 images, so a default run costs about $0.08.",
+          "default": 200,
+          "prefill": 200,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "safeSearch": {
+          "title": "SafeSearch",
+          "type": "boolean",
+          "description": "Send Google's SafeSearch filter (safe=active). On by default — the Store version of this Actor should not return adult images. Turn it off only if you have a reason to.",
+          "default": true
+        },
+        "imageSize": {
+          "title": "Image size",
+          "type": "string",
+          "description": "Google's own image-size filter. `large` returns the biggest originals (smallest short side measured: 674 px), `medium` the middle band, `icon` the small ones. Empty = any size.",
+          "enum": [
+            "",
+            "large",
+            "medium",
+            "icon"
+          ],
+          "enumTitles": [
+            "Any size",
+            "Large",
+            "Medium",
+            "Icon"
+          ],
+          "default": ""
+        },
+        "imageType": {
+          "title": "Image type",
+          "type": "string",
+          "description": "Google's own image-type filter: photo, clipart (logos, drawings, PNG/SVG), lineart (black-and-white drawings) or animated (mostly GIFs). Empty = any type.",
+          "enum": [
+            "",
+            "photo",
+            "clipart",
+            "lineart",
+            "animated"
+          ],
+          "enumTitles": [
+            "Any type",
+            "Photo",
+            "Clip art",
+            "Line drawing",
+            "Animated GIF"
+          ],
+          "default": ""
+        },
+        "colour": {
+          "title": "Colour",
+          "type": "string",
+          "description": "Google's dominant-colour filter for the image itself, not for the query text. Empty = any colour.",
+          "enum": [
+            "",
+            "red",
+            "orange",
+            "yellow",
+            "green",
+            "teal",
+            "blue",
+            "purple",
+            "pink",
+            "white",
+            "gray",
+            "black",
+            "brown",
+            "blackandwhite",
+            "transparent"
+          ],
+          "enumTitles": [
+            "Any colour",
+            "Red",
+            "Orange",
+            "Yellow",
+            "Green",
+            "Teal",
+            "Blue",
+            "Purple",
+            "Pink",
+            "White",
+            "Gray",
+            "Black",
+            "Brown",
+            "Black and white",
+            "Transparent"
+          ],
+          "default": ""
+        },
+        "timeRange": {
+          "title": "Time range",
+          "type": "string",
+          "description": "Only images from pages Google indexed recently: day, week, month or year. Useful for news and trends. Empty = any time.",
+          "enum": [
+            "",
+            "day",
+            "week",
+            "month",
+            "year"
+          ],
+          "enumTitles": [
+            "Any time",
+            "Past 24 hours",
+            "Past week",
+            "Past month",
+            "Past year"
+          ],
+          "default": ""
+        },
+        "concurrency": {
+          "title": "Concurrent queries",
+          "type": "integer",
+          "description": "How many queries are fetched in parallel (1-8, default 3). Pages of the same query are always fetched one after another. Higher is faster but uses more proxy sessions at once.",
+          "default": 3,
+          "prefill": 3,
+          "minimum": 1,
+          "maximum": 8
+        }
+      },
+      "required": [
+        "queries"
+      ]
+    }
+  },
+  {
+    "tool": "google_shopping",
+    "actor": "subimpact/google-shopping-scraper",
+    "title": "Google Shopping Scraper (Cheap, No Browser)",
+    "description": "Search Google Shopping by keyword and get one row per product: title, price, currency, old price, merchant, rating, review count, delivery, image and a shopping link. No browser, no API key. From $2.50 per 1,000 products.",
+    "pricing": [
+      "Product delivered: $0.0025"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "queries": {
+          "title": "Search queries",
+          "type": "array",
+          "description": "One or more Google Shopping searches, e.g. `iphone 16` or `running shoes`. Each query returns Google's first Shopping results page (about 40 products). Add more queries to cover more products. Maximum 100 queries per run.",
+          "default": [
+            "iphone 16"
+          ],
+          "prefill": [
+            "iphone 16"
+          ],
+          "maxItems": 100
+        },
+        "gl": {
+          "title": "Country code (gl)",
+          "type": "string",
+          "description": "Two-letter country code for the Google country setting. It also decides the currency Google shows (us = USD, gb = GBP, de = EUR, my = MYR, ...). Examples: us, gb, de, my, sg, au, in.",
+          "default": "us",
+          "prefill": "us"
+        },
+        "hl": {
+          "title": "Language code (hl)",
+          "type": "string",
+          "description": "Google interface language. Use a two-letter code like en, de or ms, or a regional code like en-GB.",
+          "default": "en",
+          "prefill": "en"
+        },
+        "maxProductsPerQuery": {
+          "title": "Max products per query",
+          "type": "integer",
+          "description": "Upper bound on delivered product rows for each query. Google's first Shopping page is server-rendered with about 40 product cards and there is no working page-2 URL (verified November 2026), so in practice a query returns at most 40-50 rows; this cap just trims them.",
+          "default": 40,
+          "prefill": 40,
+          "minimum": 1,
+          "maximum": 200
+        },
+        "maxItems": {
+          "title": "Max products per run (all queries)",
+          "type": "integer",
+          "description": "Global cost ceiling: the run stops after this many product rows, across all queries. At $0.0025 per product, 100 rows cost $0.25. The default single query returns about 40 products, so a default run costs about $0.10 plus proxy usage.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "sortBy": {
+          "title": "Sort order",
+          "type": "string",
+          "description": "How Google should order the results. Google's own sort control is discovered on each page and followed (one extra request per query); if the page shows no sort control the results stay in Google's default order.",
+          "enum": [
+            "relevance",
+            "price_low_to_high",
+            "price_high_to_low",
+            "rating_high_to_low"
+          ],
+          "enumTitles": [
+            "Relevance (Google default)",
+            "Price: low to high",
+            "Price: high to low",
+            "Rating: high to low"
+          ],
+          "default": "relevance"
+        },
+        "includeInlineThumbnails": {
+          "title": "Include inline thumbnails",
+          "type": "boolean",
+          "description": "Google embeds many product images directly in the page as base64 data (about 10 KB each) instead of linking them. Off (default): those rows get thumbnailUrl = null and your dataset stays small. On: thumbnailUrl holds the data: URI. Linked images (https://encrypted-tbn*.gstatic.com/...) are always kept.",
+          "default": false
+        },
+        "concurrency": {
+          "title": "Concurrent queries",
+          "type": "integer",
+          "description": "How many queries are fetched in parallel. Higher is faster but uses more proxy sessions at once. Default 5.",
+          "default": 5,
+          "prefill": 5,
+          "minimum": 1,
+          "maximum": 10
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "google_news_rss",
+    "actor": "subimpact/google-news-rss-scraper",
+    "title": "Google News Scraper: search, topics and local news as JSON",
+    "description": "Google News as JSON from search queries (with operators like when:7d and site:), topic feeds and local feeds: headline, publisher, resolved publisher URL, publish time, source domain and related stories. No browser, no API key. From $1.00 per 1,000 articles.",
+    "pricing": [
+      "Article scraped: $0.001"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "queries": {
+          "title": "Search queries",
+          "type": "array",
+          "description": "Google News search queries, one feed each. Google's own search operators work: quotes for an exact phrase, site:reuters.com to restrict a publisher, when:7d or when:1h for recency, AND / OR / -term. Example: \"electric vehicles\" site:reuters.com when:7d",
+          "prefill": [
+            "malaysia economy"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "topics": {
+          "title": "Topic headlines",
+          "type": "array",
+          "description": "Google News topic feeds: the same headlines Google News shows on its topic pages, each story with the cluster of articles covering it.",
+          "default": [],
+          "items": {
+            "type": "string",
+            "enum": [
+              "WORLD",
+              "NATION",
+              "BUSINESS",
+              "TECHNOLOGY",
+              "ENTERTAINMENT",
+              "SPORTS",
+              "SCIENCE",
+              "HEALTH"
+            ],
+            "enumTitles": [
+              "World",
+              "Nation (your country)",
+              "Business",
+              "Technology",
+              "Entertainment",
+              "Sports",
+              "Science",
+              "Health"
+            ]
+          }
+        },
+        "geos": {
+          "title": "Geo headlines (places)",
+          "type": "array",
+          "description": "Place names for Google News geo feeds, e.g. Malaysia, Penang, Singapore, London. Google only resolves places it knows for the chosen country, so a run with no matching place returns an Empty row (not charged).",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "language": {
+          "title": "Language (hl)",
+          "type": "string",
+          "description": "Google interface locale, e.g. en-US, en-GB, en-MY, ms-MY, id, pt-BR, zh-CN. It selects the edition language of every feed and is copied to each row as language.",
+          "default": "en-US"
+        },
+        "country": {
+          "title": "Country (gl)",
+          "type": "string",
+          "description": "Two-letter country code for the Google News edition, e.g. US, MY, SG, GB, ID. Copied to each row as country. Together with the language it forms Google's ceid parameter (MY + en-MY -> MY:en).",
+          "default": "US"
+        },
+        "maxArticlesPerFeed": {
+          "title": "Max articles per feed",
+          "type": "integer",
+          "description": "Rows taken from each feed, in the order Google ranks them. Google's RSS returns at most ~100 items per feed, so 100 means everything.",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 100
+        },
+        "maxItems": {
+          "title": "Max rows per run",
+          "type": "integer",
+          "description": "Hard cap on delivered article rows for the whole run. Counting stops at rows actually delivered, so a run never goes over the cap.",
+          "default": 300,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "resolveUrls": {
+          "title": "Resolve publisher URLs",
+          "type": "boolean",
+          "description": "Follow each news.google.com/rss/articles/<id> link through Google's public batchexecute endpoint to the real publisher URL. Costs one extra Google request per article and takes a few seconds per 100 rows; turn it off for a faster, cheaper metadata-only run (publisherUrl stays null, googleNewsUrl is always kept).",
+          "default": true
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. Plain HTTP works and is the default; switch on Apify Proxy if Google starts rate-limiting your runs or if you need a specific country's News edition.",
+          "prefill": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "keyword_suggestions",
+    "actor": "subimpact/keyword-autocomplete-suggestions",
+    "title": "Keyword Autocomplete Scraper: Google, YouTube, Amazon, Bing",
+    "description": "Every autocomplete suggestion for your keywords from Google, YouTube, Bing, Amazon and DuckDuckGo as JSON: suggestion, engine, rank and the expanded query that produced it. Alphabet and question expansion, no API key. From $0.30 per 1,000 suggestions.",
+    "pricing": [
+      "Autocomplete suggestion scraped: $0.0003"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "keywords": {
+          "title": "Keywords (seeds)",
+          "type": "array",
+          "description": "Seed keywords to collect autocomplete suggestions for, e.g. [\"coffee\", \"running shoes\"]. Duplicates and blank entries are dropped. Up to 10,000 per run.",
+          "prefill": [
+            "coffee",
+            "running shoes"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "engines": {
+          "title": "Engines",
+          "type": "array",
+          "description": "Which autocomplete engines to query: google (Google Search), youtube (YouTube), bing (Bing), amazon (Amazon product search) or duckduckgo (DuckDuckGo). Default [\"google\"]. Pick several to compare what each engine suggests for the same keyword.",
+          "default": [
+            "google"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "language": {
+          "title": "Language",
+          "type": "string",
+          "description": "Interface language for the suggestions, e.g. en, de, es, ja, pt-BR. Sent as hl to Google/YouTube, setlang to Bing and accept-language to Amazon. DuckDuckGo's autocomplete ignores it (the value is still written to every row).",
+          "default": "en"
+        },
+        "country": {
+          "title": "Country",
+          "type": "string",
+          "description": "Two-letter country code for the suggestions, e.g. us, gb, de, jp, my. Sent as gl to Google/YouTube and used to pick the Amazon marketplace (US, GB, DE, JP and IN have their own; other countries fall back to the US marketplace). DuckDuckGo's autocomplete ignores it.",
+          "default": "us"
+        },
+        "expand": {
+          "title": "Expansion mode",
+          "type": "string",
+          "description": "none queries only the seed. alphabet also queries the seed plus a-z and 0-9 (37 queries per keyword and engine). questions also queries the seed plus who/what/where/when/why/how/can/is/are/does and vs/for/near (14 queries per keyword and engine). Expansion is how you harvest suggestions the plain seed never returns.",
+          "enum": [
+            "none",
+            "alphabet",
+            "questions"
+          ],
+          "enumTitles": [
+            "None — the seed keyword only",
+            "Alphabet — seed + a-z + 0-9",
+            "Questions — seed + who/what/where/when/why/how/can/is/are/does/vs/for/near"
+          ],
+          "default": "none"
+        },
+        "maxSuggestionsPerKeyword": {
+          "title": "Max suggestions per keyword and engine",
+          "type": "integer",
+          "description": "How many suggestions to keep for each keyword on each engine (1-1,000, default 200). Expansion stops for that keyword/engine once the limit is reached.",
+          "default": 200,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxItems": {
+          "title": "Max rows (suggestions)",
+          "type": "integer",
+          "description": "Maximum number of suggestion rows delivered in one run (1-100,000, default 1,000). Counts delivered suggestions only: free empty/error status rows do not use up the cap. Default 1,000 costs $0.30.",
+          "default": 1000,
+          "minimum": 1,
+          "maximum": 100000
+        },
+        "dedupe": {
+          "title": "De-duplicate suggestions",
+          "type": "boolean",
+          "description": "When true (default), a suggestion that an engine already returned for the same keyword is delivered once, even when a later expanded query returns it again (e.g. \"coffee\" from both \"coffee\" and \"coffee shop\"). Duplicates are counted in the run log.",
+          "default": true
+        },
+        "concurrency": {
+          "title": "Concurrency",
+          "type": "integer",
+          "description": "How many keyword/engine tasks run in parallel (1-20, default 5). Each task sends its expanded queries one after another (up to 37 requests with alphabet expansion), so 5 is already gentle on the engines' rate limits.",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. Plain HTTP works and is the default; switch on Apify Proxy if an engine starts rate-limiting your runs or if you need suggestions as seen from another country.",
+          "prefill": {
+            "useApifyProxy": false
+          }
+        }
+      },
+      "required": [
+        "keywords"
+      ]
+    }
+  },
+  {
+    "tool": "app_reviews",
+    "actor": "subimpact/app-reviews-api",
+    "title": "App Store & Google Play Reviews API",
+    "description": "iOS App Store and Google Play reviews as one JSON stream: rating, title, text, app version, date, helpful votes, developer replies, country and language. Both stores in one actor, from $0.09 per 1,000 reviews.",
+    "pricing": [
+      "Review: $9e-05"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "apps": {
+          "title": "Apps",
+          "type": "array",
+          "description": "Apps to pull reviews for. Paste anything that identifies an app and the store is detected automatically: App Store URLs (https://apps.apple.com/us/app/instagram/id389801252), bare Apple ids (id389801252 or 389801252), Google Play URLs (https://play.google.com/store/apps/details?id=com.instagram.android) or bare package names (com.instagram.android). Mix both stores in one run.",
+          "prefill": [
+            "id389801252",
+            "com.instagram.android"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "country": {
+          "title": "Country",
+          "type": "string",
+          "description": "Two-letter store country: us, gb, de, my, sg, in, jp, br… The store's country decides which reviews exist (App Store storefront, Google Play country) and both stores return reviews written in every language for that country.",
+          "default": "us"
+        },
+        "language": {
+          "title": "Language",
+          "type": "string",
+          "description": "Language code used for the store pages and for the App Store's amp-api interface language, e.g. en, de, fr, pt-BR, zh-Hans. Review text is always returned as the reviewer wrote it.",
+          "default": "en"
+        },
+        "sort": {
+          "title": "Sort order",
+          "type": "string",
+          "description": "newest = newest reviews first (recommended with sinceDate, the run stops paging as soon as it reaches older reviews). mostRelevant = the store's own relevance / most-helpful ordering, which is not chronological.",
+          "enum": [
+            "newest",
+            "mostRelevant"
+          ],
+          "enumTitles": [
+            "Newest first",
+            "Most relevant / most helpful"
+          ],
+          "default": "newest"
+        },
+        "maxReviewsPerApp": {
+          "title": "Max reviews per app",
+          "type": "integer",
+          "description": "Cap on delivered reviews for each app (1-50000). The default of 200 reviews per app keeps a two-app default run at about four cents. Apple: up to 500 reviews per app come from Apple's public review feed (sorted, with app version); above 500 the actor switches to Apple's deeper web endpoint, which pages past 500 but does not expose the app version.",
+          "default": 200,
+          "minimum": 1,
+          "maximum": 50000
+        },
+        "minRating": {
+          "title": "Min rating",
+          "type": "integer",
+          "description": "Skip reviews with fewer stars than this (1-5). Leave empty for no lower bound.",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "maxRating": {
+          "title": "Max rating",
+          "type": "integer",
+          "description": "Skip reviews with more stars than this (1-5). Leave empty for no upper bound.",
+          "minimum": 1,
+          "maximum": 5
+        },
+        "sinceDate": {
+          "title": "Since date",
+          "type": "string",
+          "description": "Only deliver reviews published on or after this date. ISO format, e.g. 2026-01-01 or 2026-01-01T00:00:00Z. With sort=newest the actor stops paging once it reaches older reviews, so it does not crawl history it will not deliver."
+        }
+      },
+      "required": [
+        "apps"
+      ]
+    }
+  },
+  {
+    "tool": "facebook_pages",
+    "actor": "subimpact/facebook-pages-scraper",
+    "title": "Facebook Pages Scraper: Posts, Pages & Comments",
+    "description": "Public Facebook Pages without login: page info with exact follower counts, the latest posts with text, reactions, comments, shares and media, and single post pages with visible comments. No cookies, no browser. $1.00 per 1,000 posts.",
+    "pricing": [
+      "Post: $0.001",
+      "Page: $0.002",
+      "Comment: $0.0005"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "pageUrls": {
+          "title": "Facebook Pages",
+          "type": "array",
+          "description": "Public Facebook Pages to read. Any of these forms works: NASA, @NASA, https://www.facebook.com/NASA, a page tab link such as https://www.facebook.com/NASA/about (read as the page itself), https://www.facebook.com/profile.php?id=100044561550831. Each page gives one page row plus its latest posts. Give pageUrls, postUrls, or both.",
+          "prefill": [
+            "https://www.facebook.com/NASA",
+            "https://www.facebook.com/bbcnews"
+          ],
+          "example": [
+            "NASA",
+            "https://www.facebook.com/PavilionKL"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "postUrls": {
+          "title": "Single post links (optional)",
+          "type": "array",
+          "description": "Facebook post, video, reel or photo permalinks such as https://www.facebook.com/NASA/posts/<id>, https://www.facebook.com/NASA/videos/<id>, /reel/<id> or https://www.facebook.com/photo/?fbid=<id>. A page link pasted here is read as the page. Each link gives that post plus, when Include comments is on, the comments the page shows. Leave empty to scrape only the pages above.",
+          "example": [
+            "https://www.facebook.com/NASA/posts/pfbid09brqCCTZ2tMaqk582QcQo83AgQoc3s9xE5H82qkMQBsNokX3knkXckksXddVNhxfl"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200
+        },
+        "maxPostsPerPage": {
+          "title": "Posts per page",
+          "type": "integer",
+          "description": "How many of a page's latest posts to deliver (0 to 50). 0 delivers the page row only. facebook.com serves about 20 posts per page with no deeper pagination, so asking for more does not fetch older posts.",
+          "default": 20,
+          "prefill": 20,
+          "minimum": 0,
+          "maximum": 50
+        },
+        "includeComments": {
+          "title": "Include visible comments of post links",
+          "type": "boolean",
+          "description": "For each single post link, also deliver the comments that the post page shows. Comments are charged as comment rows. Only the comments facebook.com renders are available; there are no further comment pages.",
+          "default": true,
+          "prefill": true
+        },
+        "maxCommentsPerPost": {
+          "title": "Comments per post",
+          "type": "integer",
+          "description": "How many visible comments to keep for each single post link (0 to 100). 0 turns comments off without changing Include comments.",
+          "default": 20,
+          "prefill": 20,
+          "minimum": 0,
+          "maximum": 100
+        },
+        "maxItems": {
+          "title": "Max rows per run",
+          "type": "integer",
+          "description": "Hard cap on charged rows in one run: page rows plus post and comment rows (1 to 10000). The run stops cleanly when the cap is reached.",
+          "default": 200,
+          "prefill": 200,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify datacenter proxy is the default. If facebook.com answers a page with its login page, the actor retries it on fresh sessions and then once through the RESIDENTIAL proxy, unless you pick your own proxy groups here. A proxy failure fails the request and never falls back to a direct request.",
+          "default": {
+            "useApifyProxy": true
+          },
+          "prefill": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "tiktok_profile",
+    "actor": "subimpact/tiktok-profile-scraper",
+    "title": "TikTok Profile Scraper: Followers, Likes & Bio",
+    "description": "Public TikTok profile stats with exact counts: followers, following, likes, video count, bio, bio link, verified flag, avatar and account creation time. No login, no browser. $0.25 per 1,000 profiles.",
+    "pricing": [
+      "Profile: $0.00025"
+    ],
+    "usage_paid_by_user": true,
+    "input": {
+      "properties": {
+        "usernames": {
+          "title": "TikTok profiles",
+          "type": "array",
+          "description": "Public TikTok profiles to fetch. Any of these forms works: nasa, @nasa, https://www.tiktok.com/@nasa, or a video URL such as https://www.tiktok.com/@nasa/video/123 (the @handle is read from it). Duplicates are dropped. Entries that cannot be read come back as free error rows. Leave empty to get @nasa.",
+          "prefill": [
+            "nasa",
+            "natgeo"
+          ],
+          "example": [
+            "nasa",
+            "@natgeo",
+            "https://www.tiktok.com/@nasa"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxItems": {
+          "title": "Max profiles per run",
+          "type": "integer",
+          "description": "Hard cap on how many profiles one run handles (1 to 10000). Extra entries in the list are skipped and the status message says so.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify datacenter proxy is the default and works for TikTok profiles. Set useApifyProxy to false to go direct from the Apify platform. Do not use residential proxies: TikTok serves them a page without any profile data. A proxy failure fails the request, it never silently falls back to a direct one.",
+          "default": {
+            "useApifyProxy": true
+          },
+          "prefill": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "threads",
+    "actor": "subimpact/threads-scraper",
+    "title": "Threads Scraper: Profiles, Posts & Replies",
+    "description": "Public Threads (threads.com) profiles with followers and bio, their latest posts, and single post pages with visible replies: text, likes, replies, reposts, quotes, media. No login, no browser. $1.00 per 1,000 posts.",
+    "pricing": [
+      "Post: $0.001",
+      "Profile: $0.002"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "usernames": {
+          "title": "Threads profiles",
+          "type": "array",
+          "description": "Public Threads profiles to read. Any of these forms works: zuck, @zuck, https://www.threads.com/@zuck, https://www.threads.net/@zuck. Each profile gives one profile row plus its latest posts. Give usernames, postUrls, or both.",
+          "prefill": [
+            "zuck",
+            "nasa"
+          ],
+          "example": [
+            "zuck",
+            "@nasa",
+            "https://www.threads.com/@zuck"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1,
+          "maxItems": 100
+        },
+        "postUrls": {
+          "title": "Single post links (optional)",
+          "type": "array",
+          "description": "Threads post links such as https://www.threads.com/@zuck/post/DeZtp-TkQHh (.net links work too). Each link gives that post plus, when Include replies is on, the replies the page shows. Leave empty to scrape only the profiles above.",
+          "example": [
+            "https://www.threads.com/@zuck/post/DeZtp-TkQHh"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "maxItems": 200
+        },
+        "maxPostsPerProfile": {
+          "title": "Posts per profile",
+          "type": "integer",
+          "description": "How many of a profile's latest posts to deliver (0 to 50). 0 delivers the profile row only. threads.com serves about 15 threads per profile page with no deeper pagination, so asking for more than that does not fetch older posts.",
+          "default": 15,
+          "prefill": 15,
+          "minimum": 0,
+          "maximum": 50
+        },
+        "includeReplies": {
+          "title": "Include visible replies of post links",
+          "type": "boolean",
+          "description": "For each post link, also deliver the replies that the post page shows. Replies are charged as post rows. Only the replies threads.com renders are available; there are no further reply pages.",
+          "default": true,
+          "prefill": true
+        },
+        "maxRepliesPerPost": {
+          "title": "Replies per post",
+          "type": "integer",
+          "description": "How many visible replies to keep for each post link (0 to 100). 0 turns replies off without changing Include replies.",
+          "default": 20,
+          "prefill": 20,
+          "minimum": 0,
+          "maximum": 100
+        },
+        "maxItems": {
+          "title": "Max rows per run",
+          "type": "integer",
+          "description": "Hard cap on charged rows in one run: profile rows plus post and reply rows (1 to 10000). The run stops cleanly when the cap is reached.",
+          "default": 200,
+          "prefill": 200,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify datacenter proxy is the default and works for these pages. Direct requests (turn the proxy off) also returned data when this actor was built. A proxy failure fails the request and never falls back to a direct request.",
+          "default": {
+            "useApifyProxy": true
+          },
+          "prefill": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "tumblr",
+    "actor": "subimpact/tumblr-scraper",
+    "title": "Tumblr Scraper",
+    "description": "Scrape Tumblr posts from any public blog, tag or search query. Full-resolution media, tags, note counts, engagement metrics, reblog info and NSFW classification. No API key, no login needed.",
+    "pricing": [
+      "Posts scraped: $0.002",
+      "Media file downloaded: $0.005"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "mode": {
+          "title": "Mode",
+          "type": "string",
+          "description": "blog = posts from one or more blogs (legacy read API first, with an automatic fallback to the blog's SSR page; paginates through the archive). tag = posts from a tag hub page. search = posts matching a search query.",
+          "enum": [
+            "blog",
+            "tag",
+            "search"
+          ],
+          "enumTitles": [
+            "Blog posts",
+            "Tag timeline",
+            "Search results"
+          ],
+          "default": "tag",
+          "prefill": "tag"
+        },
+        "blogNames": {
+          "title": "Blog names (blog mode)",
+          "type": "string",
+          "description": "One or more blogs, comma-separated. Accepts a bare name (staff), a host (staff.tumblr.com), a custom domain, or a full URL (https://staff.tumblr.com).",
+          "default": "nasa",
+          "prefill": "nasa"
+        },
+        "tags": {
+          "title": "Tags (tag mode)",
+          "type": "string",
+          "description": "One or more tags, comma-separated. A leading # and a full /tagged/ URL are both accepted. Pages beyond the first are fetched through Tumblr's web API; from an EU exit IP that API can redirect to a consent wall — see the README.",
+          "default": "photography",
+          "prefill": "photography"
+        },
+        "searchQueries": {
+          "title": "Search queries (search mode)",
+          "type": "string",
+          "description": "One or more search queries, comma-separated. Pages beyond the first are fetched through Tumblr's web API; from an EU exit IP that API can redirect to a consent wall — see the README.",
+          "prefill": "photography"
+        },
+        "postTypes": {
+          "title": "Post types",
+          "type": "array",
+          "description": "Keep only these post types. Leave empty for all types. Types are detected by sniffing the actual post media, not by trusting Tumblr's declared type — a 'regular' post with inline photos matches both text and photo.",
+          "default": [],
+          "items": {
+            "type": "string",
+            "enum": [
+              "text",
+              "photo",
+              "video",
+              "audio",
+              "quote",
+              "link",
+              "chat",
+              "answer"
+            ],
+            "enumTitles": [
+              "Text",
+              "Photo",
+              "Video",
+              "Audio",
+              "Quote",
+              "Link",
+              "Chat",
+              "Answer"
+            ]
+          }
+        },
+        "maxPosts": {
+          "title": "Max posts",
+          "type": "integer",
+          "description": "Total posts to collect across all targets. Deduplicated by post ID, so overlapping tags/queries never double-count.",
+          "default": 50,
+          "prefill": 50,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "includeNotes": {
+          "title": "Include notes",
+          "type": "boolean",
+          "description": "Request note details (notes_info + reblog_info) and emit a notes[] column. Note counts always come back; individual note bodies are NOT returned by Tumblr's keyless endpoints, so notes[] is usually null — see the README.",
+          "default": false
+        },
+        "downloadMedia": {
+          "title": "Download media files",
+          "type": "boolean",
+          "description": "Download images and videos into the run's key-value store and reference them from each row's mediaFiles column. Files over 50 MB and third-party embeds are skipped. Billed per file downloaded.",
+          "default": false
+        },
+        "fullResMedia": {
+          "title": "Resolve full-resolution media",
+          "type": "boolean",
+          "description": "Pick the largest available rendition of every image/video instead of Tumblr's small thumbnail. Uses inline srcset / NPF data where possible, and only falls back to fetching the post page when a post offers nothing better.",
+          "default": true
+        },
+        "includeRaw": {
+          "title": "Include raw payload",
+          "type": "boolean",
+          "description": "Keep the untouched Tumblr object in a raw column for full fidelity. Turn off for smaller datasets.",
+          "default": true
+        },
+        "requestDelayMs": {
+          "title": "Delay between requests (ms)",
+          "type": "integer",
+          "description": "Hard floor between HTTP requests. Tumblr rate-limits per IP and starts returning 429 after bursts of 3-6 rapid requests, so values under 1000 ms are not recommended.",
+          "default": 1100,
+          "prefill": 1100,
+          "minimum": 500,
+          "maximum": 30000
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify Proxy settings. Datacenter proxy works for all modes (pagination verified live through it). Set a non-EU country (US) if your exit IP is EU-based (Tumblr's consent wall can gate its JSON API) — or switch to RESIDENTIAL if you see repeated 429s.",
+          "default": {
+            "useApifyProxy": true,
+            "apifyProxyGroups": []
+          },
+          "prefill": {
+            "useApifyProxy": true,
+            "apifyProxyGroups": []
+          }
+        }
+      },
+      "required": [
+        "mode"
+      ]
+    }
+  },
+  {
+    "tool": "aliexpress_products",
+    "actor": "subimpact/aliexpress-scraper",
+    "title": "AliExpress Scraper: Search Products, Prices & Orders",
+    "description": "AliExpress search results without login or browser: product title, sale and original price, discount, orders sold, rating, image and item URL, with paging and sort by orders. $1.00 per 1,000 products.",
+    "pricing": [
+      "Product: $0.001"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "searchTerms": {
+          "title": "Search keywords",
+          "type": "array",
+          "description": "AliExpress search keywords, one per line, e.g. usb c cable or phone case. Each keyword is searched on its own and its results are paged. Links are not accepted: this actor reads search result pages, not product detail pages. Entries that cannot be read come back as free error rows. Leave empty to search for usb c cable.",
+          "prefill": [
+            "usb c cable",
+            "phone case"
+          ],
+          "example": [
+            "usb c cable",
+            "phone case",
+            "wireless earbuds"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxItemsPerSearch": {
+          "title": "Max products per keyword",
+          "type": "integer",
+          "description": "How many products to collect for each keyword (1 to 600). AliExpress returns about 60 products per page, so 60 is one page and 120 is two pages. Paging stops early when AliExpress reports the last page or returns an empty page.",
+          "default": 60,
+          "prefill": 60,
+          "minimum": 1,
+          "maximum": 600
+        },
+        "sortBy": {
+          "title": "Sort results by",
+          "type": "string",
+          "description": "relevance keeps AliExpress's best-match order. orders sorts by how many units the listing sold, most first, which is the usual way to find proven products.",
+          "enum": [
+            "relevance",
+            "orders"
+          ],
+          "enumTitles": [
+            "Relevance (AliExpress best match)",
+            "Orders (most sold first)"
+          ],
+          "default": "relevance",
+          "prefill": "relevance"
+        },
+        "maxItems": {
+          "title": "Max products per run",
+          "type": "integer",
+          "description": "Hard cap on how many product rows the whole run can deliver, across all keywords (1 to 10000). The run stops cleanly when it is reached. Only delivered products are charged.",
+          "default": 300,
+          "prefill": 300,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Apify datacenter proxy is the default and works for AliExpress search pages. Set useApifyProxy to false to go direct from the Apify platform. A proxy failure fails that request, it never silently falls back to a direct one.",
+          "default": {
+            "useApifyProxy": true
+          },
+          "prefill": {
+            "useApifyProxy": true
+          }
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "linkedin_jobs",
+    "actor": "subimpact/linkedin-jobs-api",
+    "title": "LinkedIn Jobs Scraper: Public Job Listings, No Login",
+    "description": "Scrape public LinkedIn job listings by keyword and location: title, company, location, posting date, plus optional full description, seniority, employment type and applicant count. No login.",
+    "pricing": [
+      "Job listing: $0.0005",
+      "Job details: $0.0012"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "searches": {
+          "title": "Searches",
+          "type": "array",
+          "description": "Keyword and location pairs. Each pair is one LinkedIn job search. Example: [{\"keywords\":\"data engineer\",\"location\":\"Malaysia\"}]. Use either this or searchUrls. With neither, the prefilled demo search runs and nothing else.",
+          "prefill": [
+            {
+              "keywords": "data engineer",
+              "location": "Malaysia"
+            }
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "keywords": {
+                "title": "Keywords",
+                "type": "string",
+                "description": "Job title or search terms, for example data engineer."
+              },
+              "location": {
+                "title": "Location",
+                "type": "string",
+                "description": "City, region or country, for example Malaysia or Singapore. Leave empty for LinkedIn's default location."
+              }
+            },
+            "required": [
+              "keywords"
+            ]
+          }
+        },
+        "searchUrls": {
+          "title": "LinkedIn search URLs",
+          "type": "array",
+          "description": "LinkedIn jobs search URLs copied from your browser, for example https://www.linkedin.com/jobs/search/?keywords=data%20engineer&location=Malaysia&f_WT=2. keywords, location and the f_TPR, f_WT, f_JT, f_E, sortBy and geoId filters are read from the URL. Use either this or searches.",
+          "items": {
+            "type": "string"
+          }
+        },
+        "maxJobsPerSearch": {
+          "title": "Max jobs per search",
+          "type": "integer",
+          "description": "Cap on delivered jobs per search (1 to 1000). LinkedIn's guest endpoint stops returning cards around start=990, so a search yields at most about 1,000 jobs.",
+          "default": 50,
+          "prefill": 20,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxTotalJobs": {
+          "title": "Max total jobs",
+          "type": "integer",
+          "description": "Global cap across every search in one run. This is the hard cost ceiling. Set 0 for no limit.",
+          "default": 200,
+          "prefill": 50,
+          "minimum": 0,
+          "maximum": 2000
+        },
+        "includeDetails": {
+          "title": "Include job details",
+          "type": "boolean",
+          "description": "Fetch each job's public detail page for the full description, seniority level, employment type, job function, industries, applicant count and the apply type. Adds one request and one extra charge per job.",
+          "default": false
+        },
+        "detailConcurrency": {
+          "title": "Detail page concurrency",
+          "type": "integer",
+          "description": "How many detail pages to fetch in parallel when includeDetails is on. Rows are still delivered and charged one at a time, in listing order. Higher is faster, lower is gentler on LinkedIn.",
+          "default": 6,
+          "minimum": 1,
+          "maximum": 10
+        },
+        "postedWithin": {
+          "title": "Posted within",
+          "type": "string",
+          "description": "Keep jobs posted in the last 24 hours, week or month. LinkedIn applies this as the f_TPR filter.",
+          "enum": [
+            "any",
+            "24h",
+            "week",
+            "month"
+          ],
+          "enumTitles": [
+            "Any time",
+            "Past 24 hours",
+            "Past week",
+            "Past month"
+          ],
+          "default": "any"
+        },
+        "workplaceType": {
+          "title": "Workplace type",
+          "type": "array",
+          "description": "On-site, remote or hybrid. Leave empty for all.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "onsite",
+              "remote",
+              "hybrid"
+            ],
+            "enumTitles": [
+              "On-site",
+              "Remote",
+              "Hybrid"
+            ]
+          }
+        },
+        "jobType": {
+          "title": "Job type",
+          "type": "array",
+          "description": "Full-time, part-time, contract, temporary or internship. Leave empty for all.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "full-time",
+              "part-time",
+              "contract",
+              "temporary",
+              "internship"
+            ],
+            "enumTitles": [
+              "Full-time",
+              "Part-time",
+              "Contract",
+              "Temporary",
+              "Internship"
+            ]
+          }
+        },
+        "experienceLevel": {
+          "title": "Experience level",
+          "type": "array",
+          "description": "Internship through executive. Leave empty for all.",
+          "items": {
+            "type": "string",
+            "enum": [
+              "internship",
+              "entry",
+              "associate",
+              "mid-senior",
+              "director",
+              "executive"
+            ],
+            "enumTitles": [
+              "Internship",
+              "Entry level",
+              "Associate",
+              "Mid-Senior level",
+              "Director",
+              "Executive"
+            ]
+          }
+        },
+        "sortByDate": {
+          "title": "Newest first",
+          "type": "boolean",
+          "description": "Ask LinkedIn to sort by posting date instead of relevance.",
+          "default": false
+        },
+        "proxyCountry": {
+          "title": "Proxy country",
+          "type": "string",
+          "description": "Two-letter country for the residential proxy session, for example US or MY. LinkedIn throttles datacenter IPs, so the Actor always runs through Apify residential proxy.",
+          "default": "US"
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "seek_jobstreet_jobs",
+    "actor": "subimpact/seek-jobstreet-jobs-api",
+    "title": "SEEK & JobStreet Jobs API (6 markets)",
+    "description": "Job search as JSON for SEEK (Australia, New Zealand) and JobStreet (Malaysia, Singapore, Philippines, Indonesia): title, advertiser, salary text, classification, location and posting date, plus optional full ad text. From $0.80 per 1,000 jobs.",
+    "pricing": [
+      "Job scraped: $0.0008",
+      "Job details added: $0.0005"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "searches": {
+          "title": "Searches",
+          "type": "array",
+          "description": "Keyword and location pairs. Each pair is one job search on the chosen market. Example: [{\"keywords\":\"data engineer\",\"location\":\"Melbourne VIC\"}]. Location may be a city, a state or region, or left empty for the whole country.",
+          "prefill": [
+            {
+              "keywords": "data engineer"
+            }
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "keywords": {
+                "title": "Keywords",
+                "type": "string",
+                "description": "Job title or search terms, for example data engineer or accountant."
+              },
+              "location": {
+                "title": "Location",
+                "type": "string",
+                "description": "City, region or country, for example Melbourne VIC, Kuala Lumpur, Singapore or Hong Kong. Leave empty to search the whole market."
+              }
+            },
+            "required": [
+              "keywords"
+            ]
+          }
+        },
+        "market": {
+          "title": "Market",
+          "type": "string",
+          "description": "Which job board to search. AU = SEEK Australia (au.seek.com), NZ = SEEK New Zealand (nz.seek.com), MY/SG/PH/ID = JobStreet. Each market only returns jobs in its own country. JobsDB (Hong Kong, Thailand) is not offered: it blocks automated access, including through residential proxies.",
+          "enum": [
+            "AU",
+            "NZ",
+            "MY",
+            "SG",
+            "PH",
+            "ID"
+          ],
+          "enumTitles": [
+            "Australia — SEEK",
+            "New Zealand — SEEK",
+            "Malaysia — JobStreet",
+            "Singapore — JobStreet",
+            "Philippines — JobStreet",
+            "Indonesia — JobStreet"
+          ],
+          "default": "AU"
+        },
+        "dateRange": {
+          "title": "Posted within (days)",
+          "type": "integer",
+          "description": "Only return jobs posted in the last N days. Leave empty for any age. The job board applies this filter server-side; 1, 3, 7, 14 and 31 are the values the sites themselves offer.",
+          "minimum": 1,
+          "maximum": 365
+        },
+        "workType": {
+          "title": "Work type",
+          "type": "string",
+          "description": "Restrict to one employment type. Leave empty for all. The board's own filter is advisory for some employers: most rows match, a few are classified differently by the advertiser.",
+          "enum": [
+            "full-time",
+            "part-time",
+            "contract",
+            "casual"
+          ],
+          "enumTitles": [
+            "Full time",
+            "Part time",
+            "Contract / temp",
+            "Casual"
+          ]
+        },
+        "maxJobsPerSearch": {
+          "title": "Max jobs per search",
+          "type": "integer",
+          "description": "Cap on delivered jobs for each keyword/location pair (1-1000). Default 100.",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 1000
+        },
+        "maxTotalJobs": {
+          "title": "Max total jobs",
+          "type": "integer",
+          "description": "Global cap across every search in one run, the hard cost ceiling (1-10000, default 200). Set it as high as you like, up to 10000; runs stop charging when Actor.maxTotalChargeUsd / ACTOR_MAX_PAID_DATASET_ITEMS is reached.",
+          "default": 200,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "includeDetails": {
+          "title": "Include full job ad",
+          "type": "boolean",
+          "description": "Open every job ad and add the full description text, salary label and expiry date. One extra request per job and an extra $0.50 per 1,000 jobs ($0.0005 each). Off by default.",
+          "default": false
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. SEEK and JobStreet answer direct requests, so no proxy is needed. Set one only if your runs report HTTP 403 errors."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "domain_intel",
+    "actor": "subimpact/domain-intel",
+    "title": "Domain WHOIS, DNS, Email & SSL Checker",
+    "description": "Domain intelligence in one row per domain: WHOIS via RDAP (registrar, created, expiry), DNS records, SPF and DMARC, email provider, HTTPS status and TLS certificate expiry, plus availability. No API key. $0.50 per 1,000 domains, no start fee.",
+    "pricing": [
+      "Domain checked: $0.0005"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "domains": {
+          "title": "Domains",
+          "type": "array",
+          "description": "Domains, hostnames or URLs to check. URLs are reduced to their registrable domain (https://www.example.co.uk/pricing?x=1 -> example.co.uk), and duplicates are removed. Up to 10,000 per run.",
+          "prefill": [
+            "apify.com",
+            "example.com",
+            "stripe.com"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "checks": {
+          "title": "Checks to run",
+          "type": "array",
+          "description": "Which checks to run. Allowed values: whois (RDAP registration data), dns (A, AAAA, MX, NS, TXT, CAA records), email (SPF, DMARC and mail-provider guess), tls (certificate issuer and expiry) and http (HTTPS reachability, final URL). Default: all five. Unknown values are ignored; DNS answers needed by 'email' are fetched once and shared with 'dns'.",
+          "default": [
+            "whois",
+            "dns",
+            "email",
+            "tls",
+            "http"
+          ],
+          "items": {
+            "type": "string"
+          }
+        },
+        "concurrency": {
+          "title": "Concurrency",
+          "type": "integer",
+          "description": "How many domains are checked in parallel (1-20). Higher is faster but more likely to hit RDAP or DNS rate limits.",
+          "default": 5,
+          "minimum": 1,
+          "maximum": 20
+        },
+        "maxDomains": {
+          "title": "Max domains (rows)",
+          "type": "integer",
+          "description": "Maximum number of rows delivered in one run (1-10,000). Default 100 keeps a default run at a few cents. Invalid input entries are delivered as free error rows after the checked domains.",
+          "default": 100,
+          "prefill": 100,
+          "minimum": 1,
+          "maximum": 10000
+        }
+      },
+      "required": [
+        "domains"
+      ]
+    }
+  },
+  {
+    "tool": "sitemap_urls",
+    "actor": "subimpact/sitemap-url-extractor",
+    "title": "Sitemap URL Extractor — every URL in a site's sitemaps",
+    "description": "Extract every URL from a site's XML sitemaps: robots.txt discovery, nested sitemap indexes, gzip and RSS/Atom feeds, with lastmod, changefreq, priority, image count and hreflang alternates. Optional HTTP status check per URL. $0.30 per 1,000 URLs.",
+    "pricing": [
+      "URL extracted: $0.0003",
+      "URL status checked: $0.0005"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "startUrls": {
+          "title": "Start URLs",
+          "type": "array",
+          "description": "Website roots (https://example.com) or direct sitemap URLs (https://example.com/sitemap.xml). For a site root the actor reads robots.txt for Sitemap: lines and then tries /sitemap.xml, /sitemap_index.xml, /sitemap-index.xml and /wp-sitemap.xml.",
+          "prefill": [
+            "https://www.smashingmagazine.com"
+          ],
+          "items": {
+            "type": "string"
+          },
+          "minItems": 1
+        },
+        "includePatterns": {
+          "title": "Include patterns (regex)",
+          "type": "array",
+          "description": "Keep only URLs matching at least one of these regular expressions. Example: /blog/ to keep blog URLs only. Empty = keep everything.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "excludePatterns": {
+          "title": "Exclude patterns (regex)",
+          "type": "array",
+          "description": "Drop URLs matching any of these regular expressions. Example: \\.(jpg|png|pdf)$ or /tag/. Excludes are applied after includes.",
+          "default": [],
+          "items": {
+            "type": "string"
+          }
+        },
+        "lastmodAfter": {
+          "title": "Only URLs modified after",
+          "type": "string",
+          "description": "ISO date (2026-01-31 or 2026-01-31T12:00:00Z). Keeps only sitemap entries whose <lastmod> is on or after this date. Entries without a lastmod are dropped when this is set.",
+          "default": ""
+        },
+        "maxUrls": {
+          "title": "Max URLs to deliver",
+          "type": "integer",
+          "description": "Hard cap on delivered URL rows (1-1,000,000). The run stops as soon as it is reached, so a default run stays cheap. Charged at $0.0003 per delivered URL.",
+          "default": 1000,
+          "minimum": 1,
+          "maximum": 1000000
+        },
+        "checkStatus": {
+          "title": "Check HTTP status of every URL",
+          "type": "boolean",
+          "description": "Send a HEAD request (GET fallback) to each delivered URL and fill in statusCode, so you can spot 404s and redirects. Billed separately at $0.50 per 1,000 checked URLs.",
+          "default": false
+        },
+        "maxSitemaps": {
+          "title": "Max sitemaps to read",
+          "type": "integer",
+          "description": "How many sitemap files (index children included) one run may read (1-10,000). Default 200 is plenty for almost every site.",
+          "default": 200,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "requestTimeoutSecs": {
+          "title": "Request timeout (seconds)",
+          "type": "integer",
+          "description": "How long to wait for a sitemap or robots.txt response (5-300 seconds).",
+          "default": 60,
+          "minimum": 5,
+          "maximum": 300
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. Sitemaps are public, so no proxy is used by default. Add an Apify proxy for sites that block datacenter IPs."
+        }
+      },
+      "required": []
+    }
+  },
+  {
+    "tool": "pdf_text",
+    "actor": "subimpact/pdf-text-extractor",
+    "title": "PDF Text Extractor",
+    "description": "Extract text from PDF URLs as JSON: full text, per-page text, metadata and optional tables, one row per document. Flags scanned image-only PDFs. From $2.00 per 1,000 extracted documents, platform usage included.",
+    "pricing": [
+      "Document with extracted text: $0.002"
+    ],
+    "usage_paid_by_user": null,
+    "input": {
+      "properties": {
+        "urls": {
+          "title": "PDF URLs",
+          "type": "array",
+          "description": "One entry per PDF. A plain URL string or an object with a \"url\" field both work. Redirects are followed and the resolved URL is reported as finalUrl.",
+          "default": [
+            {
+              "url": "https://www.irs.gov/pub/irs-pdf/fw9.pdf"
+            },
+            {
+              "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-145.pdf"
+            }
+          ],
+          "prefill": [
+            {
+              "url": "https://www.irs.gov/pub/irs-pdf/fw9.pdf"
+            },
+            {
+              "url": "https://nvlpubs.nist.gov/nistpubs/Legacy/SP/nistspecialpublication800-145.pdf"
+            },
+            {
+              "url": "https://arxiv.org/pdf/1706.03762"
+            }
+          ]
+        },
+        "maxPages": {
+          "title": "Max pages per document",
+          "type": "integer",
+          "description": "Extract at most this many pages from each PDF (default 200). pageCount still reports the real page count; pagesExtracted reports how many were read, and text/pageTexts/tables cover only those pages. Lower it for very large reports to cut run time.",
+          "default": 200,
+          "minimum": 1,
+          "maximum": 10000
+        },
+        "includeTables": {
+          "title": "Include tables",
+          "type": "boolean",
+          "description": "Also extract tables with pdfplumber. Each table is returned as {\"page\": n, \"rows\": [[cell, ...], ...]}. Off by default because table detection is the slowest part of a run.",
+          "default": false
+        },
+        "includePageTexts": {
+          "title": "Include per-page text",
+          "type": "boolean",
+          "description": "Include pageTexts: one normalised text string per extracted page (empty string for image-only pages). Turn off for a smaller dataset when you only need the full text.",
+          "default": true
+        },
+        "maxDocuments": {
+          "title": "Max documents (rows)",
+          "type": "integer",
+          "description": "Hard cap on document rows delivered in one run, counting every delivered row (including scanned, empty and error rows). The default of 100 keeps a run well under a dollar; at $0.002 per extracted document, 100 documents cost at most $0.20 plus platform usage.",
+          "default": 100,
+          "minimum": 1,
+          "maximum": 5000
+        },
+        "maxFileSizeMb": {
+          "title": "Max file size (MB)",
+          "type": "integer",
+          "description": "Skip (and report as an error row) any PDF larger than this. The download is aborted as soon as it crosses the limit, so oversized files do not fill memory.",
+          "default": 50,
+          "minimum": 1,
+          "maximum": 500
+        },
+        "proxyConfiguration": {
+          "title": "Proxy configuration",
+          "type": "object",
+          "description": "Optional. Most PDF hosts serve plain HTTP fine from Apify's datacenter IPs; enable Apify Proxy (or your own proxy URLs) if a publisher blocks the run. Proxy usage is billed by Apify as platform usage.",
+          "default": {
+            "useApifyProxy": false
+          }
         }
       },
       "required": []

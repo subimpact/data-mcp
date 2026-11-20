@@ -24,15 +24,15 @@ afterEach(() => {
 });
 
 describe("tools/list without credentials", () => {
-  test("exposes 23 actor tools plus get_run_results and a valid JSON Schema for each", async () => {
+  test("exposes 38 actor tools plus get_run_results and a valid JSON Schema for each", async () => {
     vi.stubEnv("APIFY_TOKEN", "");
     const { client, close } = await connectTestClient();
     try {
       const { tools } = await client.listTools();
-      expect(tools).toHaveLength(24);
+      expect(tools).toHaveLength(39);
       expect(tools.map((tool) => tool.name)).toContain("get_run_results");
       expect(tools.map((tool) => tool.name)).toContain("google_search");
-      expect(tools.filter((tool) => tool.name !== "get_run_results")).toHaveLength(23);
+      expect(tools.filter((tool) => tool.name !== "get_run_results")).toHaveLength(38);
 
       const ajv = new Ajv({ strict: false, validateFormats: false });
       for (const tool of tools) {
@@ -108,10 +108,15 @@ describe("tools/list without credentials", () => {
       expect(search.description).toContain("Google SERP + AI Overviews API");
       expect(search.description).toContain("Pricing (pay per event, billed to your Apify account): Google SERP: $0.003");
       expect(search.description).toContain("Runs on Apify as subimpact/google-serp-ai-overviews");
-      expect(search.description).not.toContain("platform usage billed to your account");
 
-      const modeTool = byName.get("google_ai_mode")!;
-      expect(modeTool.description).toContain("platform usage billed to your account");
+      // The platform-usage clause follows the live Store flag, so pick one actor of each kind.
+      const specs = loadActorSpecs();
+      const paid = specs.find((spec) => spec.usage_paid_by_user === true)!;
+      const notPaid = specs.find((spec) => spec.usage_paid_by_user !== true)!;
+      expect(byName.get(paid.tool)!.description).toContain("platform usage billed to your account");
+      expect(byName.get(notPaid.tool)!.description).not.toContain(
+        "platform usage billed to your account",
+      );
 
       const maps = byName.get("google_maps_places")!;
       expect(maps.description).toContain("$0.00005");
@@ -247,10 +252,10 @@ describe("metadata helpers", () => {
 
   test("pricingLine adds the platform usage clause only when the user pays it", () => {
     const specs = loadActorSpecs();
-    const search = specs.find((spec) => spec.tool === "google_search")!;
-    const modeSpec = specs.find((spec) => spec.tool === "google_ai_mode")!;
-    expect(pricingLine(search)).not.toContain("platform usage");
-    expect(pricingLine(modeSpec)).toContain("platform usage billed to your account");
+    const paid = specs.find((spec) => spec.usage_paid_by_user === true)!;
+    const notPaid = specs.find((spec) => spec.usage_paid_by_user !== true)!;
+    expect(pricingLine(notPaid)).not.toContain("platform usage");
+    expect(pricingLine(paid)).toContain("platform usage billed to your account");
   });
 });
 
